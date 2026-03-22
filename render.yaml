@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: senorbrew-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URLS
+        sync: false
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: true

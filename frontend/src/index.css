@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #F4F6FA;
+  color: #0A1F1E;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #E6F0EF; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #103935; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #0A2422; }
+
+/* ── Page fade-in ── */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: pageFadeIn 0.18s ease-out both;
+}
+
+/* ── Float (login panel decorative shapes) ── */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-14px) rotate(4deg); }
+  66%       { transform: translateY(-7px) rotate(-2deg); }
+}
+@keyframes floatY2 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-20px) rotate(-5deg); }
+}
+@keyframes floatY3 {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-11px); }
+}
+.float-anim   { animation: floatY  5.5s ease-in-out infinite; }
+.float-anim-2 { animation: floatY2 7.0s ease-in-out infinite; }
+.float-anim-3 { animation: floatY3 6.2s ease-in-out infinite 1.2s; }
+
+/* ── LIVE dot pulse ── */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+.live-pulse { animation: livePulse 1.4s ease-in-out infinite; }
+
+/* ── Card slide-in entrance ── */
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.card-enter { animation: cardSlideIn 0.22s ease-out both; }
+
+/* ── Button press ── */
+.btn-press:active { transform: scale(0.98) !important; }
+
+/* ── Global text selection ── */
+::selection { background: rgba(16,57,53,0.15); }
