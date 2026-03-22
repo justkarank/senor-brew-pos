@@ -76,7 +76,6 @@ senorbrew/
 |   |   |-- components/
 |   |   `-- pages/
 |   `-- vite.config.js
-|-- BCA_PROJECT_FIX_REPORT.md
 |-- render.yaml
 |-- setup.js
 `-- README.md
