@@ -189,9 +189,6 @@ function Login() {
           </div>
         </div>
 
-        <p className="absolute bottom-8 left-16 text-xs z-10" style={{ color: 'rgba(255,255,255,0.22)' }}>
-          Powered by MERN Stack
-        </p>
       </div>
 
       {/* ── Right Panel — Form ── */}
