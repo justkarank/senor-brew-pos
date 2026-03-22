@@ -31,4 +31,24 @@ api.interceptors.response.use(
   }
 );
 
+export const getApiErrorMessage = (error, fallbackMessage = 'Something went wrong. Please try again.') => {
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+
+  if (error.response?.status === 403) {
+    return 'You do not have permission to perform this action.';
+  }
+
+  if (error.response?.status === 401) {
+    return 'Your session has expired. Please log in again.';
+  }
+
+  if (!error.response) {
+    return 'Unable to reach the server. Please check the backend connection.';
+  }
+
+  return fallbackMessage;
+};
+
 export default api;

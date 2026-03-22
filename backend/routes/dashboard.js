@@ -1,21 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const auth = require('../middleware/auth');
+const { requireAuth, allowRoles } = require('../middleware/auth');
+const { getBusinessDayOrderFilter, getBusinessHour } = require('../utils/businessDate');
+const { roundCurrency } = require('../utils/orderPricing');
 
-// GET /api/dashboard/stats — today's sales stats
-router.get('/stats', auth, async (req, res) => {
+router.use(requireAuth);
+
+router.get('/stats', allowRoles('admin'), async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const orders = await Order.find(getBusinessDayOrderFilter()).sort({ createdAt: -1 });
 
-    const orders = await Order.find({ createdAt: { $gte: today } }).sort({ createdAt: -1 });
-
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = roundCurrency(orders.reduce((sum, order) => sum + order.total, 0));
     const totalOrders = orders.length;
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const avgOrderValue = totalOrders > 0 ? roundCurrency(totalRevenue / totalOrders) : 0;
 
-    // Tally item quantities for most sold item
     const itemCounts = {};
     orders.forEach(order => {
       order.items.forEach(item => {
@@ -28,11 +27,10 @@ router.get('/stats', auth, async (req, res) => {
         ? Object.keys(itemCounts).reduce((a, b) => (itemCounts[a] > itemCounts[b] ? a : b))
         : 'N/A';
 
-    // Build orders-per-hour array (index = hour 0-23)
     const hourCounts = Array(24).fill(0);
     orders.forEach(order => {
-      const hour = new Date(order.createdAt).getHours();
-      hourCounts[hour]++;
+      const hour = getBusinessHour(order.createdAt);
+      hourCounts[hour] += 1;
     });
 
     const hourlyData = hourCounts.map((count, hour) => ({
@@ -46,16 +44,16 @@ router.get('/stats', auth, async (req, res) => {
       avgOrderValue,
       mostSoldItem,
       hourlyData,
-      orders: orders.map(o => ({
-        _id: o._id,
-        tokenNumber: o.tokenNumber,
-        items: o.items,
-        subtotal: o.subtotal,
-        discount: o.discount,
-        gst: o.gst,
-        total: o.total,
-        status: o.status,
-        createdAt: o.createdAt
+      orders: orders.map(order => ({
+        _id: order._id,
+        tokenNumber: order.tokenNumber,
+        items: order.items,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        gst: order.gst,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt
       }))
     });
   } catch (err) {

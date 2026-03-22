@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import { Mail, Lock, Activity, LineChart, Wallet } from 'lucide-react';
 
 function Login() {
@@ -33,7 +33,7 @@ function Login() {
       else if (role === 'counter') navigate('/billing');
       else if (role === 'kitchen') navigate('/kitchen');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(getApiErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

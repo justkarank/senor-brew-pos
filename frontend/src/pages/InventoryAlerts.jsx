@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import { Package, AlertOctagon, AlertTriangle, CheckCircle2, Save } from 'lucide-react';
 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
@@ -35,7 +35,7 @@ function InventoryAlerts() {
       setItems(res.data);
       setError('');
     } catch (err) {
-      setError('Failed to load inventory data.');
+      setError(getApiErrorMessage(err, 'Failed to load inventory data.'));
     } finally {
       setLoading(false);
     }
@@ -55,14 +55,14 @@ function InventoryAlerts() {
     setSaved(prev => ({ ...prev, [itemId]: false }));
 
     try {
-      await api.put(`/api/menu/${itemId}`, { stockQuantity: qty });
-      setItems(prev => prev.map(item => item._id === itemId ? { ...item, stockQuantity: qty } : item));
+      const res = await api.put(`/api/menu/${itemId}`, { stockQuantity: qty });
+      setItems(prev => prev.map(item => item._id === itemId ? res.data : item));
       setStockInputs(prev => { const n = { ...prev }; delete n[itemId]; return n; });
       setSaved(prev => ({ ...prev, [itemId]: true }));
       setTimeout(() => setSaved(prev => ({ ...prev, [itemId]: false })), 2500);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update stock. Please try again.');
+      setError(getApiErrorMessage(err, 'Failed to update stock. Please try again.'));
     } finally {
       setSaving(prev => ({ ...prev, [itemId]: false }));
     }

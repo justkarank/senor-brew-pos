@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
+  orderDateKey: { type: String, required: true, trim: true },
   tokenNumber: { type: Number, required: true },
   items: [
     {
@@ -21,8 +22,18 @@ const orderSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Indexes for performance — orders queried heavily by date
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ createdAt: 1, status: 1 });
+orderSchema.index(
+  { orderDateKey: 1, tokenNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      orderDateKey: { $type: 'string' },
+      tokenNumber: { $type: 'number' }
+    }
+  }
+);
+orderSchema.index({ orderDateKey: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

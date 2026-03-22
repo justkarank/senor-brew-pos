@@ -12,6 +12,14 @@ const menuItemSchema = new mongoose.Schema({
   isAvailable: { type: Boolean, default: true }
 }, { timestamps: true });
 
+menuItemSchema.pre('save', function updateAvailabilityFromStock(next) {
+  if (this.stockQuantity <= 0) {
+    this.isAvailable = false;
+  }
+
+  next();
+});
+
 // Indexes for query performance
 menuItemSchema.index({ category: 1 });
 menuItemSchema.index({ isAvailable: 1 });

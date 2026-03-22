@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -42,7 +42,7 @@ function SalesDashboard() {
       const res = await api.get('/api/dashboard/stats');
       setStats(res.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard data.');
+      setError(getApiErrorMessage(err, 'Failed to load dashboard data.'));
     } finally {
       setLoading(false);
     }

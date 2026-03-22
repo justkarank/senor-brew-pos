@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import {
   ShoppingCart, Plus, Minus, X, Tag, BadgeCheck,
   Search, Coffee, Leaf, Cookie, CupSoda, Utensils
@@ -53,16 +53,20 @@ function BillingScreen() {
 
   useEffect(() => { fetchMenu(); }, []);
 
-  const fetchMenu = async () => {
-    setLoading(true);
+  const fetchMenu = async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/api/menu/available');
       setMenuItems(res.data);
       setError('');
     } catch (err) {
-      setError('Failed to load menu items. Please check backend connection.');
+      setError(getApiErrorMessage(err, 'Failed to load menu items.'));
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -100,18 +104,19 @@ function BillingScreen() {
     setError('');
     try {
       const orderData = {
-        items: cart.map(item => ({ itemId: item._id, name: item.name, price: item.price, quantity: item.quantity })),
-        subtotal,
-        discount: discountAmount,
-        gst,
-        total
+        items: cart.map(item => ({ itemId: item._id, quantity: item.quantity })),
+        discountPercentage: discountPct
       };
       const res = await api.post('/api/orders', orderData);
       setSuccessOrder(res.data);
       setCart([]);
       setDiscount('');
+      await fetchMenu(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate bill. Please try again.');
+      setError(getApiErrorMessage(err, 'Failed to generate bill. Please try again.'));
+      if (err.response) {
+        await fetchMenu(false);
+      }
     } finally {
       setGenerating(false);
     }

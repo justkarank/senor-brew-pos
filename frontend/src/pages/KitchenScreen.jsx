@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import { SOCKET_URL } from '../config';
 import { io } from 'socket.io-client';
 import { ChefHat, Timer, CheckCircle2, RefreshCw, Radio } from 'lucide-react';
@@ -72,7 +72,7 @@ function KitchenScreen() {
       setOrders(res.data);
       setError('');
     } catch (err) {
-      setError('Failed to load orders. Please try refreshing.');
+      setError(getApiErrorMessage(err, 'Failed to load orders. Please try refreshing.'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ function KitchenScreen() {
         prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o)
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update order status.');
+      setError(getApiErrorMessage(err, 'Failed to update order status.'));
     }
   };
 

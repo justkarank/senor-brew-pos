@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api, { getApiErrorMessage } from '../api';
 import { Plus, Pencil, Trash2, X, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
 
 const CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
@@ -42,7 +42,7 @@ function MenuManagement() {
       setItems(res.data);
       setError('');
     } catch (err) {
-      setError('Failed to load menu items.');
+      setError(getApiErrorMessage(err, 'Failed to load menu items.'));
     } finally {
       setLoading(false);
     }
@@ -70,18 +70,24 @@ function MenuManagement() {
       setError('Item name is required.');
       return;
     }
-    if (!form.price || Number(form.price) < 0) {
+    if (form.price === '' || Number(form.price) < 0) {
       setError('Valid price is required.');
       return;
     }
-    if (!form.stockQuantity || Number(form.stockQuantity) < 0) {
+    if (form.stockQuantity === '' || Number(form.stockQuantity) < 0) {
       setError('Valid stock quantity is required.');
       return;
     }
 
     setSaving(true);
     setError('');
-    const payload = { ...form, price: Number(form.price), stockQuantity: Number(form.stockQuantity) };
+    const stockQuantity = Number(form.stockQuantity);
+    const payload = {
+      ...form,
+      price: Number(form.price),
+      stockQuantity,
+      isAvailable: stockQuantity > 0 ? form.isAvailable : false
+    };
     try {
       if (editingId) {
         await api.put(`/api/menu/${editingId}`, payload);
@@ -93,7 +99,7 @@ function MenuManagement() {
       await fetchItems();
       closeForm();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save item. Please try again.');
+      setError(getApiErrorMessage(err, 'Failed to save item. Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -106,7 +112,7 @@ function MenuManagement() {
       setItems(prev => prev.filter(item => item._id !== id));
       showSuccess(`"${name}" deleted.`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete item.');
+      setError(getApiErrorMessage(err, 'Failed to delete item.'));
     }
   };
 
@@ -118,7 +124,7 @@ function MenuManagement() {
       );
       setItems(prev => prev.map(i => (i._id === item._id ? res.data : i)));
     } catch (err) {
-      setError('Failed to update availability.');
+      setError(getApiErrorMessage(err, 'Failed to update availability.'));
     }
   };
 
