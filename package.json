@@ -1,0 +1,15 @@
+{
+  "name": "senorbrew",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "setup": "node setup.js",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "seed": "npm --prefix backend run seed"
+  }
+}

@@ -4,23 +4,24 @@ import {
   ShoppingCart, Plus, Minus, X, Tag, BadgeCheck,
   Search, Coffee, Leaf, Cookie, CupSoda, Utensils
 } from 'lucide-react';
+import { calculateTotalsFromDiscountPercentage, formatCurrency } from '../utils/format';
 
 const CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
 
 const CATEGORY_ICONS = {
-  Coffee:        { icon: Coffee,   iconBg: '#FBF3E4', iconColor: '#92400E' },
-  Tea:           { icon: Leaf,     iconBg: '#E6F0EF', iconColor: '#103935' },
-  Snacks:        { icon: Cookie,   iconBg: '#F3E8FF', iconColor: '#5B21B6' },
-  'Cold Drinks': { icon: CupSoda,  iconBg: '#DBEAFE', iconColor: '#1E40AF' },
-  Other:         { icon: Utensils, iconBg: '#F1F5F9', iconColor: '#475569' }
+  Coffee: { icon: Coffee, iconBg: '#FBF3E4', iconColor: '#92400E' },
+  Tea: { icon: Leaf, iconBg: '#E6F0EF', iconColor: '#103935' },
+  Snacks: { icon: Cookie, iconBg: '#F3E8FF', iconColor: '#5B21B6' },
+  'Cold Drinks': { icon: CupSoda, iconBg: '#DBEAFE', iconColor: '#1E40AF' },
+  Other: { icon: Utensils, iconBg: '#F1F5F9', iconColor: '#475569' }
 };
 
 const CATEGORY_COLORS = {
-  Coffee:        { bg: '#FBF3E4', color: '#92400E' },
-  Tea:           { bg: '#E6F0EF', color: '#103935' },
-  Snacks:        { bg: '#F3E8FF', color: '#5B21B6' },
+  Coffee: { bg: '#FBF3E4', color: '#92400E' },
+  Tea: { bg: '#E6F0EF', color: '#103935' },
+  Snacks: { bg: '#F3E8FF', color: '#5B21B6' },
   'Cold Drinks': { bg: '#DBEAFE', color: '#1E40AF' },
-  Other:         { bg: '#F1F5F9', color: '#475569' }
+  Other: { bg: '#F1F5F9', color: '#475569' }
 };
 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
@@ -37,13 +38,11 @@ function BillingScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Debounce search input (300ms)
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Escape key closes success modal
   useEffect(() => {
     if (!successOrder) return;
     const handleKey = (e) => { if (e.key === 'Escape') setSuccessOrder(null); };
@@ -90,13 +89,9 @@ function BillingScreen() {
     setCart(prev => prev.filter(c => c._id !== itemId));
   }, []);
 
-  // Clamp discount to 0-100 for calculation, regardless of what's typed
   const discountPct = Math.min(100, Math.max(0, parseFloat(discount) || 0));
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = (subtotal * discountPct) / 100;
-  const afterDiscount = subtotal - discountAmount;
-  const gst = afterDiscount * 0.05;
-  const total = afterDiscount + gst;
+  const totals = calculateTotalsFromDiscountPercentage(cart, discountPct);
+  const { subtotal, discount: discountAmount, gst, total } = totals;
 
   const generateBill = async () => {
     if (cart.length === 0) return;
@@ -146,10 +141,7 @@ function BillingScreen() {
 
   return (
     <div className="page-enter flex flex-col lg:flex-row h-full" style={{ backgroundColor: '#F7F9F8' }}>
-
-      {/* ── Left — Menu Panel ── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-        {/* Header */}
         <div className="px-6 pt-6 pb-4" style={{ backgroundColor: '#F7F9F8' }}>
           <h2
             className="font-bold"
@@ -175,7 +167,6 @@ function BillingScreen() {
             </div>
           )}
 
-          {/* Search */}
           <div className="relative mt-4">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#8AADAA' }} />
             <input
@@ -190,7 +181,6 @@ function BillingScreen() {
             />
           </div>
 
-          {/* Category Filter Pills */}
           <div className="flex gap-2 mt-3 flex-wrap">
             {['All', ...CATEGORIES].map(cat => {
               const count = getCategoryCount(cat);
@@ -223,7 +213,6 @@ function BillingScreen() {
           </div>
         </div>
 
-        {/* Menu Grid */}
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {filteredItems.length === 0 ? (
             <div className="text-center py-20">
@@ -286,7 +275,7 @@ function BillingScreen() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-3">
-                      <span className="font-black text-sm" style={{ color: '#C9973A' }}>₹{item.price}</span>
+                      <span className="font-black text-sm" style={{ color: '#C9973A' }}>{formatCurrency(item.price)}</span>
                       {cartItem ? (
                         <span
                           className="text-xs px-2.5 py-0.5 rounded-full font-black text-white"
@@ -311,12 +300,10 @@ function BillingScreen() {
         </div>
       </div>
 
-      {/* ── Right — Order Panel ── */}
       <div
         className="w-full lg:w-80 flex flex-col shrink-0 max-h-[42vh] lg:max-h-none"
         style={{ backgroundColor: 'white', borderTop: '1px solid #E0ECEA' }}
       >
-        {/* Header */}
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #E0ECEA' }}>
           <div className="flex items-center justify-between">
             <h3 className="font-bold" style={{ color: '#0A1F1E', fontSize: '16px' }}>Order Summary</h3>
@@ -331,7 +318,6 @@ function BillingScreen() {
           </div>
         </div>
 
-        {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-4">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-8">
@@ -354,9 +340,8 @@ function BillingScreen() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold leading-tight truncate" style={{ color: '#0A1F1E' }}>{item.name}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#4A6B69' }}>₹{item.price} each</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A6B69' }}>{formatCurrency(item.price)} each</p>
                   </div>
-                  {/* Qty controls */}
                   <div
                     className="flex items-center gap-1 rounded-full px-1"
                     style={{ backgroundColor: 'white', border: '1px solid #E0ECEA' }}
@@ -397,9 +382,7 @@ function BillingScreen() {
           )}
         </div>
 
-        {/* Totals & Actions */}
         <div className="p-4 space-y-3" style={{ borderTop: '1px solid #E0ECEA' }}>
-          {/* Discount */}
           <div>
             <label
               className="flex items-center gap-1.5 mb-1.5"
@@ -426,31 +409,30 @@ function BillingScreen() {
             />
           </div>
 
-          {/* Line items */}
           <div
             className="rounded-xl p-3 space-y-2"
             style={{ backgroundColor: '#F7F9F8', border: '1px solid #F0F5F4' }}
           >
             <div className="flex justify-between text-sm" style={{ color: '#4A6B69' }}>
               <span>Subtotal</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-sm font-medium" style={{ color: '#10B981' }}>
                 <span>Discount ({discountPct}%)</span>
-                <span>−₹{discountAmount.toFixed(2)}</span>
+                <span>-{formatCurrency(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm" style={{ color: '#4A6B69' }}>
               <span>GST (5%)</span>
-              <span>₹{gst.toFixed(2)}</span>
+              <span>{formatCurrency(gst)}</span>
             </div>
             <div
               className="flex justify-between font-black text-base pt-2"
               style={{ color: '#0A1F1E', borderTop: '1px solid #E0ECEA' }}
             >
               <span>Grand Total</span>
-              <span style={{ color: '#103935' }}>₹{total.toFixed(2)}</span>
+              <span style={{ color: '#103935' }}>{formatCurrency(total)}</span>
             </div>
           </div>
 
@@ -479,7 +461,6 @@ function BillingScreen() {
         </div>
       </div>
 
-      {/* ── Success Modal ── */}
       {successOrder && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
@@ -496,7 +477,6 @@ function BillingScreen() {
               border: '1px solid #E0ECEA'
             }}
           >
-            {/* Animated check ring */}
             <div className="relative w-20 h-20 mx-auto mb-5">
               <div
                 className="absolute inset-0 rounded-full"
@@ -526,7 +506,6 @@ function BillingScreen() {
             <h3 className="text-xl font-black mb-1" style={{ color: '#0A1F1E' }}>Order Placed!</h3>
             <p className="text-sm" style={{ color: '#4A6B69' }}>Sent to kitchen successfully</p>
 
-            {/* Token number */}
             <div
               className="mt-5 rounded-2xl p-5"
               style={{
@@ -552,11 +531,11 @@ function BillingScreen() {
               <p className="text-sm" style={{ color: '#4A6B69' }}>
                 Total:{' '}
                 <strong style={{ color: '#C9973A', fontSize: '16px' }}>
-                  ₹{successOrder.total.toFixed(2)}
+                  {formatCurrency(successOrder.total)}
                 </strong>
               </p>
               <p className="text-xs" style={{ color: '#8AADAA' }}>
-                {successOrder.items.length} item{successOrder.items.length !== 1 ? 's' : ''} · GST included
+                {successOrder.items.length} item{successOrder.items.length !== 1 ? 's' : ''} - GST included
               </p>
             </div>
 

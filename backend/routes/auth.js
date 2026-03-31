@@ -12,9 +12,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
-      // Return 401 (not 404) — don't reveal whether email exists
+      // Return 401 so we do not reveal whether the email exists.
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 

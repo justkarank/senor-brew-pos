@@ -36,7 +36,11 @@ const menuItems = [
 
 async function seed() {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    if (!process.env.MONGO_URI) {
+      throw new Error('Missing MONGO_URI. Create backend/.env from backend/.env.example before seeding.');
+    }
+
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 });
     console.log('Connected to MongoDB Atlas');
 
     await User.deleteMany({});
@@ -163,6 +167,9 @@ async function seed() {
 
     process.exit(0);
   } catch (err) {
+    if (/whitelist|network access/i.test(err.message)) {
+      console.error('MongoDB Atlas rejected the connection. Add your current IP or 0.0.0.0/0 in Atlas Network Access.');
+    }
     console.error('Seeding error:', err.message);
     process.exit(1);
   }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { getApiErrorMessage } from '../api';
 import { Plus, Pencil, Trash2, X, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
+import { formatCurrency } from '../utils/format';
 
 const CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
 const emptyForm = { name: '', category: 'Coffee', price: '', stockQuantity: '', isAvailable: true };
@@ -8,11 +9,11 @@ const emptyForm = { name: '', category: 'Coffee', price: '', stockQuantity: '', 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
 
 const CATEGORY_BADGE = {
-  Coffee:        { bg: '#FBF3E4', color: '#92400E' },
-  Tea:           { bg: '#E6F0EF', color: '#103935' },
-  Snacks:        { bg: '#F3E8FF', color: '#5B21B6' },
+  Coffee: { bg: '#FBF3E4', color: '#92400E' },
+  Tea: { bg: '#E6F0EF', color: '#103935' },
+  Snacks: { bg: '#F3E8FF', color: '#5B21B6' },
   'Cold Drinks': { bg: '#DBEAFE', color: '#1E40AF' },
-  Other:         { bg: '#F1F5F9', color: '#475569' }
+  Other: { bg: '#F1F5F9', color: '#475569' }
 };
 
 function MenuManagement() {
@@ -28,7 +29,6 @@ function MenuManagement() {
 
   useEffect(() => { fetchItems(); }, []);
 
-  // Escape key closes the modal
   useEffect(() => {
     if (!showForm) return;
     const handleKey = (e) => { if (e.key === 'Escape') closeForm(); };
@@ -65,7 +65,6 @@ function MenuManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Client-side validation
     if (!form.name.trim()) {
       setError('Item name is required.');
       return;
@@ -149,8 +148,6 @@ function MenuManagement() {
 
   return (
     <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
-
-      {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2
@@ -185,7 +182,6 @@ function MenuManagement() {
         </div>
       )}
 
-      {/* Category Filter Pills */}
       <div className="flex gap-2 mb-5 flex-wrap">
         {['All', ...CATEGORIES].map(cat => {
           const count = getCategoryCount(cat);
@@ -217,7 +213,6 @@ function MenuManagement() {
         })}
       </div>
 
-      {/* Table */}
       <div
         className="overflow-hidden"
         style={{
@@ -278,7 +273,7 @@ function MenuManagement() {
                           {item.category}
                         </span>
                       </td>
-                      <td className="px-6 font-bold text-sm" style={{ color: '#C9973A' }}>₹{item.price}</td>
+                      <td className="px-6 font-bold text-sm" style={{ color: '#C9973A' }}>{formatCurrency(item.price)}</td>
                       <td className="px-6">
                         <div className="flex items-center gap-2">
                           <span
@@ -347,7 +342,6 @@ function MenuManagement() {
         </div>
       </div>
 
-      {/* ── Add / Edit Modal ── */}
       {showForm && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
@@ -364,7 +358,6 @@ function MenuManagement() {
               border: '1px solid #E0ECEA'
             }}
           >
-            {/* Modal header */}
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-bold" style={{ color: '#0A1F1E', fontSize: '18px' }}>
@@ -387,7 +380,6 @@ function MenuManagement() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
               <div>
                 <label className="block font-medium mb-1.5" style={{ color: '#0A1F1E', fontSize: '14px' }}>Item Name *</label>
                 <input
@@ -405,7 +397,6 @@ function MenuManagement() {
                 <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>Use a clear, customer-facing name</p>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block font-medium mb-1.5" style={{ color: '#0A1F1E', fontSize: '14px' }}>Category *</label>
                 <select
@@ -420,10 +411,9 @@ function MenuManagement() {
                 </select>
               </div>
 
-              {/* Price + Stock */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1.5" style={{ color: '#0A1F1E', fontSize: '14px' }}>Price (₹) *</label>
+                  <label className="block font-medium mb-1.5" style={{ color: '#0A1F1E', fontSize: '14px' }}>Price (INR) *</label>
                   <input
                     type="number"
                     value={form.price}
@@ -456,7 +446,6 @@ function MenuManagement() {
                 </div>
               </div>
 
-              {/* Availability toggle */}
               <div
                 onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
                 className="flex items-center gap-3 cursor-pointer p-3.5 rounded-xl select-none transition-all duration-200"
@@ -523,7 +512,6 @@ function MenuManagement() {
         </div>
       )}
 
-      {/* Success Toast */}
       {successMsg && (
         <div
           className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold card-enter"

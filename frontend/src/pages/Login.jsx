@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../api';
 import { Mail, Lock, Activity, LineChart, Wallet } from 'lucide-react';
+import { getDefaultRouteForRole, getStoredToken, getStoredUser } from '../utils/session';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -11,12 +12,10 @@ function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const token = getStoredToken();
+    const user = getStoredUser();
     if (token && user) {
-      if (user.role === 'admin') navigate('/dashboard');
-      else if (user.role === 'counter') navigate('/billing');
-      else if (user.role === 'kitchen') navigate('/kitchen');
+      navigate(getDefaultRouteForRole(user.role));
     }
   }, [navigate]);
 
@@ -28,10 +27,7 @@ function Login() {
       const res = await api.post('/api/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      const role = res.data.user.role;
-      if (role === 'admin') navigate('/dashboard');
-      else if (role === 'counter') navigate('/billing');
-      else if (role === 'kitchen') navigate('/kitchen');
+      navigate(getDefaultRouteForRole(res.data.user.role));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
@@ -41,7 +37,7 @@ function Login() {
 
   const fillDemo = (role) => {
     const creds = {
-      admin:   { email: 'admin@senorbrew.com',   password: 'admin123'   },
+      admin: { email: 'admin@senorbrew.com', password: 'admin123' },
       counter: { email: 'counter@senorbrew.com', password: 'counter123' },
       kitchen: { email: 'kitchen@senorbrew.com', password: 'kitchen123' }
     };
@@ -52,13 +48,10 @@ function Login() {
 
   return (
     <div className="min-h-screen flex">
-
-      {/* ── Left Panel — Brand ── */}
       <div
         className="hidden lg:flex lg:w-[58%] flex-col justify-center p-16 relative overflow-hidden"
         style={{ backgroundColor: '#103935' }}
       >
-        {/* Diagonal grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -66,7 +59,6 @@ function Login() {
           }}
         />
 
-        {/* Floating decorative shapes */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
             className="float-anim absolute"
@@ -118,7 +110,6 @@ function Login() {
           />
         </div>
 
-        {/* Large watermark */}
         <div className="absolute inset-0 flex items-end justify-start pointer-events-none overflow-hidden">
           <span
             className="font-black leading-none select-none"
@@ -134,7 +125,6 @@ function Login() {
           </span>
         </div>
 
-        {/* Content */}
         <div className="relative z-10 max-w-lg">
           <div className="flex items-center gap-3 mb-12">
             <div
@@ -156,7 +146,9 @@ function Login() {
             className="font-black text-white leading-none mb-4"
             style={{ fontSize: '58px', letterSpacing: '-1.5px' }}
           >
-            Senor<br />Brew Club
+            Senor
+            <br />
+            Brew Club
           </h1>
           <p className="font-medium mb-12" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '18px' }}>
             POS &amp; Management System
@@ -169,9 +161,9 @@ function Login() {
 
           <div className="flex flex-col gap-5">
             {[
-              { icon: Activity,   label: 'Real-time Orders',  desc: 'Live kitchen updates via Socket.io' },
-              { icon: Wallet,     label: 'Smart Billing',     desc: 'Auto GST, discounts & token system' },
-              { icon: LineChart,  label: 'Sales Analytics',   desc: 'Hourly charts and daily insights' }
+              { icon: Activity, label: 'Real-time Orders', desc: 'Live kitchen updates via Socket.io' },
+              { icon: Wallet, label: 'Smart Billing', desc: 'Auto GST, discounts & token system' },
+              { icon: LineChart, label: 'Sales Analytics', desc: 'Hourly charts and daily insights' }
             ].map(({ icon: Icon, label, desc }) => (
               <div key={label} className="flex items-start gap-4">
                 <div
@@ -188,17 +180,13 @@ function Login() {
             ))}
           </div>
         </div>
-
       </div>
 
-      {/* ── Right Panel — Form ── */}
       <div
         className="flex-1 flex items-center justify-center p-8"
         style={{ backgroundColor: 'white' }}
       >
         <div className="w-full max-w-sm">
-
-          {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
@@ -218,7 +206,6 @@ function Login() {
           <p className="text-sm mb-8" style={{ color: '#4A6B69' }}>Enter your credentials to access the system</p>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* Email */}
             <div>
               <label
                 className="block font-medium mb-1.5"
@@ -243,7 +230,6 @@ function Login() {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <label
                 className="block font-medium mb-1.5"
@@ -289,11 +275,10 @@ function Login() {
               onMouseEnter={e => { if (!loading) e.currentTarget.style.backgroundColor = '#0A2422'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#103935'; }}
             >
-              {loading ? 'Signing in...' : 'Sign In →'}
+              {loading ? 'Signing in...' : 'Sign In ->'}
             </button>
           </form>
 
-          {/* Demo Access */}
           <div className="mt-6 pt-5" style={{ borderTop: '1px solid #F0F5F4' }}>
             <p
               className="font-semibold uppercase text-center mb-3"
@@ -303,7 +288,7 @@ function Login() {
             </p>
             <div className="flex gap-2">
               {[
-                { role: 'admin',   label: 'Admin',   color: '#103935' },
+                { role: 'admin', label: 'Admin', color: '#103935' },
                 { role: 'counter', label: 'Counter', color: '#1E40AF' },
                 { role: 'kitchen', label: 'Kitchen', color: '#5B21B6' }
               ].map(({ role, label, color }) => (

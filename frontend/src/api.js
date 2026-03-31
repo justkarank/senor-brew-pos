@@ -1,30 +1,29 @@
 import axios from 'axios';
 import { API_URL } from './config';
+import { clearStoredSession, getStoredToken } from './utils/session';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000
+  timeout: 15000
 });
 
-// Request interceptor — attach JWT token automatically
+// Attach the JWT automatically when we have one.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => Promise.reject(error));
 
-// Response interceptor — handle 401 globally (expired / invalid token)
+// Handle expired or invalid sessions in one place.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear session and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      clearStoredSession();
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.assign('/login');
       }
     }
     return Promise.reject(error);

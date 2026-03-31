@@ -4,11 +4,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { TrendingUp, ClipboardList, Award, BarChart3, RefreshCw, BarChart2 } from 'lucide-react';
+import { formatCurrency } from '../utils/format';
+import { getStoredUser } from '../utils/session';
 
 const STATUS_BADGE = {
-  pending:   { bg: '#FBF3E4', color: '#92400E', border: 'rgba(245,158,11,0.3)' },
+  pending: { bg: '#FBF3E4', color: '#92400E', border: 'rgba(245,158,11,0.3)' },
   preparing: { bg: '#DBEAFE', color: '#1E40AF', border: 'rgba(59,130,246,0.3)' },
-  ready:     { bg: '#E6F0EF', color: '#103935', border: 'rgba(16,57,53,0.3)' }
+  ready: { bg: '#E6F0EF', color: '#103935', border: 'rgba(16,57,53,0.3)' }
 };
 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
@@ -31,7 +33,7 @@ function SalesDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = getStoredUser() || {};
 
   useEffect(() => { fetchStats(); }, []);
 
@@ -84,7 +86,7 @@ function SalesDashboard() {
   const statCards = [
     {
       label: "Today's Revenue",
-      value: `₹${stats.totalRevenue.toFixed(2)}`,
+      value: formatCurrency(stats.totalRevenue),
       icon: TrendingUp,
       iconBg: '#E6F0EF',
       iconColor: '#103935',
@@ -108,7 +110,7 @@ function SalesDashboard() {
     },
     {
       label: 'Avg Order Value',
-      value: `₹${stats.avgOrderValue.toFixed(2)}`,
+      value: formatCurrency(stats.avgOrderValue),
       icon: BarChart3,
       iconBg: '#F3E8FF',
       iconColor: '#8B5CF6',
@@ -122,8 +124,6 @@ function SalesDashboard() {
 
   return (
     <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
-
-      {/* Header */}
       <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#8AADAA', letterSpacing: '0.08em' }}>
@@ -151,7 +151,6 @@ function SalesDashboard() {
         </button>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statCards.map((card, i) => {
           const Icon = card.icon;
@@ -188,12 +187,11 @@ function SalesDashboard() {
         })}
       </div>
 
-      {/* Bar Chart */}
       <div className="p-6 mb-5" style={CARD_STYLE}>
         <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
           <div>
             <h3 className="font-bold" style={{ color: '#0A1F1E', fontSize: '18px' }}>Hourly Sales Today</h3>
-            <p className="text-xs mt-0.5" style={{ color: '#8AADAA' }}>Orders per hour · 6 AM – 11 PM</p>
+            <p className="text-xs mt-0.5" style={{ color: '#8AADAA' }}>Orders per hour - 6 AM to 11 PM</p>
           </div>
           {hasChartData && (
             <span
@@ -256,7 +254,6 @@ function SalesDashboard() {
         </div>
       </div>
 
-      {/* Orders Table */}
       <div className="overflow-hidden" style={CARD_STYLE}>
         <div
           className="px-6 py-4 flex justify-between items-center"
@@ -315,11 +312,11 @@ function SalesDashboard() {
                         style={{ color: '#4A6B69', maxWidth: '220px' }}
                       >
                         <span className="block truncate">
-                          {order.items.map(i => `${i.name} ×${i.quantity}`).join(', ')}
+                          {order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}
                         </span>
                       </td>
                       <td className="px-6 font-bold text-sm" style={{ color: '#C9973A' }}>
-                        ₹{order.total.toFixed(2)}
+                        {formatCurrency(order.total)}
                       </td>
                       <td className="px-6">
                         <span

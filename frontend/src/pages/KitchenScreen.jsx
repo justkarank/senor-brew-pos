@@ -3,6 +3,7 @@ import api, { getApiErrorMessage } from '../api';
 import { SOCKET_URL } from '../config';
 import { io } from 'socket.io-client';
 import { ChefHat, Timer, CheckCircle2, RefreshCw, Radio } from 'lucide-react';
+
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
 
 const STATUS_CONFIG = {
@@ -38,10 +39,8 @@ function KitchenScreen() {
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
-  // Used only to trigger re-render every 30s for "X mins ago" labels
   const [, setTick] = useState(0);
 
-  // Re-render every 30s to update "X mins ago" labels
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 30000);
     return () => clearInterval(interval);
@@ -81,7 +80,6 @@ function KitchenScreen() {
   const updateStatus = async (orderId, newStatus) => {
     try {
       await api.put(`/api/orders/${orderId}/status`, { status: newStatus });
-      // Optimistic update — socket event will also update but this feels faster
       setOrders(prev =>
         prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o)
       );
@@ -114,8 +112,6 @@ function KitchenScreen() {
 
   return (
     <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
-
-      {/* Header Card */}
       <div
         className="flex justify-between items-center px-6 py-4 mb-6 flex-wrap gap-3"
         style={{
@@ -132,7 +128,6 @@ function KitchenScreen() {
           <p className="text-sm mt-0.5" style={{ color: '#4A6B69' }}>Real-time order management</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* LIVE badge */}
           <div
             className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full font-semibold"
             style={connected
@@ -173,7 +168,6 @@ function KitchenScreen() {
         </div>
       )}
 
-      {/* Summary strip when orders exist */}
       {sortedOrders.length > 0 && (
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div
@@ -200,7 +194,6 @@ function KitchenScreen() {
         </div>
       )}
 
-      {/* Empty State */}
       {sortedOrders.length === 0 ? (
         <div
           className="text-center py-20 rounded-2xl"
@@ -228,21 +221,20 @@ function KitchenScreen() {
                   />
                   {label}
                 </div>
-                {i < 2 && <span style={{ color: '#D0E0DE', fontSize: '12px' }}>→</span>}
+                {i < 2 && <span style={{ color: '#D0E0DE', fontSize: '12px' }}>-&gt;</span>}
               </React.Fragment>
             ))}
           </div>
         </div>
       ) : (
         <>
-          {/* Active Orders */}
           {activeOrders.length > 0 && (
             <div className="mb-8">
               <p
                 className="font-semibold uppercase mb-4"
                 style={{ color: '#4A6B69', fontSize: '11px', letterSpacing: '0.06em' }}
               >
-                Active Orders · {activeOrders.length}
+                Active Orders - {activeOrders.length}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeOrders.map(order => {
@@ -261,11 +253,9 @@ function KitchenScreen() {
                       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(16,57,53,0.14)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                       onMouseLeave={e => { e.currentTarget.style.boxShadow = CARD_SHADOW; e.currentTarget.style.transform = ''; }}
                     >
-                      {/* Colored top bar */}
                       <div style={{ height: '6px', backgroundColor: config.topBar }} />
 
                       <div className="p-5">
-                        {/* Token + Badge */}
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <p
@@ -297,7 +287,6 @@ function KitchenScreen() {
                           </span>
                         </div>
 
-                        {/* Items */}
                         <div
                           className="space-y-2 mb-4 pt-3"
                           style={{ borderTop: '1px solid #F0F5F4' }}
@@ -309,13 +298,12 @@ function KitchenScreen() {
                                 className="text-xs font-bold px-2 py-0.5 rounded-lg"
                                 style={{ backgroundColor: '#E6F0EF', color: '#103935' }}
                               >
-                                ×{item.quantity}
+                                x{item.quantity}
                               </span>
                             </div>
                           ))}
                         </div>
 
-                        {/* Action Button */}
                         {order.status === 'pending' && (
                           <button
                             onClick={() => updateStatus(order._id, 'preparing')}
@@ -335,7 +323,7 @@ function KitchenScreen() {
                             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0A2422'}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#103935'}
                           >
-                            Mark Ready ✓
+                            Mark Ready
                           </button>
                         )}
                       </div>
@@ -346,14 +334,13 @@ function KitchenScreen() {
             </div>
           )}
 
-          {/* Completed Orders */}
           {completedOrders.length > 0 && (
             <div>
               <p
                 className="font-semibold uppercase mb-4"
                 style={{ color: '#8AADAA', fontSize: '11px', letterSpacing: '0.06em' }}
               >
-                Completed · {completedOrders.length}
+                Completed - {completedOrders.length}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {completedOrders.map(order => (
@@ -399,7 +386,7 @@ function KitchenScreen() {
                         {order.items.map((item, idx) => (
                           <div key={`${order._id}-done-${idx}`} className="flex justify-between items-center text-sm">
                             <span style={{ color: '#8AADAA' }}>{item.name}</span>
-                            <span className="text-xs" style={{ color: '#B0C8C5' }}>×{item.quantity}</span>
+                            <span className="text-xs" style={{ color: '#B0C8C5' }}>x{item.quantity}</span>
                           </div>
                         ))}
                       </div>

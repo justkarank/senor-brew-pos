@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import BillingScreen from './pages/BillingScreen';
-import KitchenScreen from './pages/KitchenScreen';
-import MenuManagement from './pages/MenuManagement';
-import InventoryAlerts from './pages/InventoryAlerts';
-import SalesDashboard from './pages/SalesDashboard';
 import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Menu } from 'lucide-react';
+
+const BillingScreen = lazy(() => import('./pages/BillingScreen'));
+const KitchenScreen = lazy(() => import('./pages/KitchenScreen'));
+const MenuManagement = lazy(() => import('./pages/MenuManagement'));
+const InventoryAlerts = lazy(() => import('./pages/InventoryAlerts'));
+const SalesDashboard = lazy(() => import('./pages/SalesDashboard'));
+
+function PageLoader({ label = 'Loading page...' }) {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[240px]" style={{ backgroundColor: '#F7F9F8' }}>
+      <div className="text-center">
+        <div
+          className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+          style={{ border: '3px solid #E6F0EF', borderTopColor: '#103935' }}
+        />
+        <p className="text-sm font-medium" style={{ color: '#4A6B69' }}>{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function withPageLoader(element, label) {
+  return <Suspense fallback={<PageLoader label={label} />}>{element}</Suspense>;
+}
 
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,7 +37,6 @@ function Layout({ children }) {
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Mobile top bar — only visible below lg breakpoint */}
         <div
           className="lg:hidden flex items-center px-4 h-14 shrink-0"
           style={{ backgroundColor: '#103935', borderBottom: '1px solid rgba(255,255,255,0.10)' }}
@@ -65,7 +83,7 @@ function App() {
           path="/billing"
           element={
             <ProtectedRoute roles={['admin', 'counter']}>
-              <Layout><BillingScreen /></Layout>
+              <Layout>{withPageLoader(<BillingScreen />, 'Loading billing...')}</Layout>
             </ProtectedRoute>
           }
         />
@@ -74,7 +92,7 @@ function App() {
           path="/kitchen"
           element={
             <ProtectedRoute roles={['admin', 'kitchen']}>
-              <Layout><KitchenScreen /></Layout>
+              <Layout>{withPageLoader(<KitchenScreen />, 'Loading kitchen...')}</Layout>
             </ProtectedRoute>
           }
         />
@@ -83,7 +101,7 @@ function App() {
           path="/menu"
           element={
             <ProtectedRoute roles={['admin']}>
-              <Layout><MenuManagement /></Layout>
+              <Layout>{withPageLoader(<MenuManagement />, 'Loading menu...')}</Layout>
             </ProtectedRoute>
           }
         />
@@ -92,7 +110,7 @@ function App() {
           path="/inventory"
           element={
             <ProtectedRoute roles={['admin']}>
-              <Layout><InventoryAlerts /></Layout>
+              <Layout>{withPageLoader(<InventoryAlerts />, 'Loading inventory...')}</Layout>
             </ProtectedRoute>
           }
         />
@@ -101,7 +119,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute roles={['admin']}>
-              <Layout><SalesDashboard /></Layout>
+              <Layout>{withPageLoader(<SalesDashboard />, 'Loading dashboard...')}</Layout>
             </ProtectedRoute>
           }
         />

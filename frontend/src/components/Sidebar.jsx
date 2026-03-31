@@ -1,26 +1,25 @@
 import React, { useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, ChefHat, UtensilsCrossed, Package, LogOut, X } from 'lucide-react';
+import { clearStoredSession, getStoredUser } from '../utils/session';
 
 const navItems = [
   { path: '/dashboard', label: 'Sales Dashboard', icon: LayoutDashboard, roles: ['admin'] },
-  { path: '/billing',   label: 'Billing',          icon: ShoppingCart,    roles: ['admin', 'counter'] },
-  { path: '/kitchen',   label: 'Kitchen (KOT)',     icon: ChefHat,         roles: ['admin', 'kitchen'] },
-  { path: '/menu',      label: 'Menu Management',  icon: UtensilsCrossed, roles: ['admin'] },
-  { path: '/inventory', label: 'Inventory Alerts',  icon: Package,         roles: ['admin'] }
+  { path: '/billing', label: 'Billing', icon: ShoppingCart, roles: ['admin', 'counter'] },
+  { path: '/kitchen', label: 'Kitchen (KOT)', icon: ChefHat, roles: ['admin', 'kitchen'] },
+  { path: '/menu', label: 'Menu Management', icon: UtensilsCrossed, roles: ['admin'] },
+  { path: '/inventory', label: 'Inventory Alerts', icon: Package, roles: ['admin'] }
 ];
 
 function Sidebar({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = getStoredUser() || {};
 
-  // Close sidebar on route change (mobile)
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname, setIsOpen]);
 
-  // Escape key closes mobile sidebar
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
@@ -29,8 +28,7 @@ function Sidebar({ isOpen, setIsOpen }) {
   }, [isOpen, setIsOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearStoredSession();
     navigate('/login');
   };
 
@@ -48,7 +46,6 @@ function Sidebar({ isOpen, setIsOpen }) {
         borderRight: '1px solid rgba(255,255,255,0.08)'
       }}
     >
-      {/* Logo + Mobile close button */}
       <div className="px-5 py-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
         <div className="flex items-center gap-3">
           <div
@@ -62,7 +59,6 @@ function Sidebar({ isOpen, setIsOpen }) {
             <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>POS System</p>
           </div>
         </div>
-        {/* Close button — mobile only */}
         <button
           className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-200"
           style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
@@ -75,7 +71,6 @@ function Sidebar({ isOpen, setIsOpen }) {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {visibleItems.map(item => {
           const Icon = item.icon;
@@ -83,10 +78,8 @@ function Sidebar({ isOpen, setIsOpen }) {
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium relative ${
-                  isActive ? '' : ''
-                }`
+              className={() =>
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium relative'
               }
               style={({ isActive }) => isActive
                 ? {
@@ -133,10 +126,8 @@ function Sidebar({ isOpen, setIsOpen }) {
         })}
       </nav>
 
-      {/* Divider */}
       <div className="mx-3" style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }} />
 
-      {/* User Section */}
       <div className="p-3 space-y-2">
         <div className="flex items-center gap-3 px-2 py-2">
           <div
@@ -172,13 +163,10 @@ function Sidebar({ isOpen, setIsOpen }) {
 
   return (
     <>
-      {/* ── Desktop sidebar (always visible at lg+) ── */}
       <div className="hidden lg:flex lg:shrink-0">
         {sidebarContent}
       </div>
 
-      {/* ── Mobile sidebar (overlay) ── */}
-      {/* Backdrop */}
       <div
         className={`lg:hidden fixed inset-0 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -188,7 +176,6 @@ function Sidebar({ isOpen, setIsOpen }) {
         aria-hidden="true"
       />
 
-      {/* Slide-in panel */}
       <div
         className={`lg:hidden fixed inset-y-0 left-0 z-50 flex transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'

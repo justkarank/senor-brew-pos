@@ -7,17 +7,34 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]?.trim());
 
-const localOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const localOriginHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const configuredOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
 const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS === 'true';
 
+if (missingEnvVars.length > 0) {
+  console.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  console.error('Create backend/.env from backend/.env.example and restart the server.');
+  process.exit(1);
+}
+
+const isLocalOrigin = (origin) => {
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return (protocol === 'http:' || protocol === 'https:') && localOriginHosts.has(hostname);
+  } catch {
+    return false;
+  }
+};
+
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  if (localOrigins.includes(origin)) return true;
+  if (isLocalOrigin(origin)) return true;
   if (configuredOrigins.includes(origin)) return true;
   if (allowVercelPreviews && /^https:\/\/.+\.vercel\.app$/.test(origin)) return true;
   return false;
@@ -35,6 +52,7 @@ const corsOptions = {
 };
 
 const io = new Server(server, { cors: corsOptions });
+const getDatabaseStatus = () => (mongoose.connection.readyState === 1 ? 'connected' : 'disconnected');
 
 // Middleware
 app.use(cors(corsOptions));
@@ -59,7 +77,11 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({
+  status: getDatabaseStatus() === 'connected' ? 'ok' : 'degraded',
+  database: getDatabaseStatus(),
+  timestamp: new Date().toISOString()
+}));
 
 // 404 handler
 app.use((req, res) => {
@@ -101,7 +123,7 @@ process.on('SIGINT', shutdown);
 
 // Connect to MongoDB then start server
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     const PORT = process.env.PORT || 5000;
@@ -111,6 +133,9 @@ mongoose
   })
   .catch((err) => {
     console.error('MongoDB connection failed:', err.message);
-    console.error('Check your MONGO_URI in backend/.env');
+    if (/whitelist|network access/i.test(err.message)) {
+      console.error('MongoDB Atlas is rejecting this machine. Add your current IP or 0.0.0.0/0 in Atlas Network Access.');
+    }
+    console.error('Check your MONGO_URI in backend/.env and verify Atlas Network Access settings.');
     process.exit(1);
   });

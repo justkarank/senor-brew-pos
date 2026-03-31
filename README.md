@@ -1,42 +1,24 @@
 # Senor Brew Club
 
-Senor Brew Club is a full-stack cafe POS and management system built for BCA major project submission. It covers billing, kitchen workflow, menu management, inventory tracking, and daily sales reporting with role-based access for `admin`, `counter`, and `kitchen`.
+Senor Brew Club is a full-stack cafe POS and management system built for a BCA major project. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with seeded demo data.
 
-## Main Features
+## Features
 
 - Role-based login with JWT authentication
-- Billing screen with search, category filter, cart, discount, GST, and bill generation
+- Billing screen with category filters, search, cart, discount, GST, and bill generation
 - Real-time kitchen updates using Socket.io
-- Menu CRUD and item availability control
-- Inventory alerts with inline stock updates
-- Sales dashboard with revenue, order count, average order value, top-selling item, hourly trends, and order history
-- Seed data for quick demo and testing
+- Menu CRUD with availability and stock validation
+- Inventory alerts with inline restocking
+- Sales dashboard with revenue, orders, top item, hourly chart, and order history
+- Seeded demo users, menu items, and sample orders for presentation
 
 ## Roles
 
 | Role | Access |
 | --- | --- |
-| Admin | Dashboard, billing, kitchen, menu management, inventory |
-| Counter | Billing and order creation |
-| Kitchen | Kitchen orders and status updates |
-
-## Important Business Rules
-
-- GST is `5%`
-- Discount is applied first, then GST is calculated
-- Order statuses are `pending`, `preparing`, and `ready`
-- Categories are `Coffee`, `Tea`, `Snacks`, `Cold Drinks`, and `Other`
-- Only available items with stock are shown for billing
-- Stock is reduced when an order is placed
-- Token numbers are generated uniquely per day
-
-## Project Quality Fixes
-
-- Backend RBAC is enforced, not just frontend route protection
-- Order totals are calculated on the backend from database prices
-- Negative stock is prevented through backend validation
-- Daily token generation is atomic and safe for concurrent orders
-- Order creation, stock update, and token allocation are kept consistent with MongoDB transactions
+| Admin | Dashboard, billing, kitchen, menu, inventory |
+| Counter | Billing |
+| Kitchen | Kitchen display |
 
 ## Tech Stack
 
@@ -54,7 +36,7 @@ Senor Brew Club is a full-stack cafe POS and management system built for BCA maj
 
 - Node.js
 - Express
-- MongoDB Atlas / MongoDB with Mongoose
+- MongoDB Atlas with Mongoose
 - JWT
 - bcryptjs
 - Socket.io
@@ -74,11 +56,113 @@ senorbrew/
 |-- frontend/
 |   |-- src/
 |   |   |-- components/
-|   |   `-- pages/
+|   |   |-- pages/
+|   |   `-- utils/
 |   `-- vite.config.js
 |-- render.yaml
 |-- setup.js
+|-- package.json
 `-- README.md
+```
+
+## Demo Credentials
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@senorbrew.com` | `admin123` |
+| Counter | `counter@senorbrew.com` | `counter123` |
+| Kitchen | `kitchen@senorbrew.com` | `kitchen123` |
+
+## Demo Data
+
+The seed script creates:
+
+- 3 users
+- 15 menu items
+- 30 demo orders
+- active kitchen orders for live workflow demo
+
+## Local Setup
+
+### 1. Create backend env
+
+Copy `backend/.env.example` to `backend/.env` and set:
+
+```env
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secure_jwt_secret
+PORT=5000
+CLIENT_URLS=http://localhost:5173
+ALLOW_VERCEL_PREVIEWS=true
+```
+
+### 2. Create frontend env
+
+Copy `frontend/.env.example` to `frontend/.env` and set:
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+### 3. Allow MongoDB Atlas access
+
+If Atlas is blocking connections, add your current IP or `0.0.0.0/0` in:
+
+`MongoDB Atlas -> Security -> Network Access`
+
+This is required for localhost and for Render unless you use a stricter allowlist that includes Render egress IPs.
+
+### 4. Install and seed
+
+From the project root:
+
+```powershell
+npm run setup
+```
+
+This installs backend and frontend dependencies and seeds the demo database.
+
+### 5. Run locally
+
+Terminal 1:
+
+```powershell
+npm run backend
+```
+
+Terminal 2:
+
+```powershell
+npm run frontend
+```
+
+Open:
+
+`http://localhost:5173`
+
+## Useful Commands
+
+From the project root:
+
+```powershell
+npm run setup
+npm run backend
+npm run frontend
+npm run build
+npm run seed
+```
+
+Direct commands if needed:
+
+```powershell
+cd backend
+npm run dev
+```
+
+```powershell
+cd frontend
+npm run dev
 ```
 
 ## Main API Routes
@@ -95,100 +179,61 @@ senorbrew/
 - `GET /api/dashboard/stats`
 - `GET /api/health`
 
-## Local Setup
-
-### Prerequisites
-
-- Node.js and npm
-- MongoDB connection string
-
-### Backend `.env`
-
-Create `backend/.env` and set:
-
-```env
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secure_jwt_secret
-PORT=5000
-CLIENT_URLS=http://localhost:5173
-ALLOW_VERCEL_PREVIEWS=true
-```
-
-### Frontend `.env` (optional for local)
-
-```env
-VITE_API_URL=http://localhost:5000
-VITE_SOCKET_URL=http://localhost:5000
-```
-
-### Quick Setup
-
-```powershell
-node setup.js
-```
-
-This installs dependencies and seeds demo data.
-
-### Start Locally
-
-Backend:
-
-```powershell
-cd backend
-npm run dev
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm run dev
-```
-
-Open `http://localhost:5173`
-
-## Demo Credentials
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@senorbrew.com` | `admin123` |
-| Counter | `counter@senorbrew.com` | `counter123` |
-| Kitchen | `kitchen@senorbrew.com` | `kitchen123` |
-
-## Seed Data
-
-The seed script creates:
-
-- 3 users
-- 15 menu items
-- 30 sample orders
-- live kitchen-ready orders for demo
-
-## Scripts
-
-### Root
-
-- `node setup.js` - install dependencies and seed database
-
-### Backend
-
-- `npm start` - start backend
-- `npm run dev` - start backend with nodemon
-- `npm run seed` - reseed database
-
-### Frontend
-
-- `npm run dev` - start frontend
-- `npm run build` - production build
-- `npm run preview` - preview build
-
 ## Deployment
 
-This project is already compatible with:
+### Render Backend
 
-- GitHub
-- Render for backend
-- Vercel for frontend
-- MongoDB Atlas for database
+`render.yaml` is included. Set these environment variables in Render:
 
-Use backend env vars for CORS and frontend env vars for API and Socket.io URLs. `render.yaml` and `frontend/vercel.json` are already included.
+- `MONGO_URI`
+- `JWT_SECRET`
+- `CLIENT_URLS`
+- `ALLOW_VERCEL_PREVIEWS=true`
+
+Recommended `CLIENT_URLS` value:
+
+```env
+http://localhost:5173,https://your-project.vercel.app,https://your-custom-domain.com
+```
+
+### Vercel Frontend
+
+Set the Vercel project root to `frontend`.
+
+Set these environment variables in Vercel:
+
+```env
+VITE_API_URL=https://your-backend.onrender.com
+VITE_SOCKET_URL=https://your-backend.onrender.com
+```
+
+`frontend/vercel.json` already handles SPA rewrites for React Router.
+
+### MongoDB Atlas
+
+Make sure Atlas allows connections from:
+
+- your local machine during development
+- your Render backend in production
+
+If you want the easiest setup for demo purposes, use `0.0.0.0/0` in Atlas Network Access.
+
+## GitHub Auto Deploy Flow
+
+Once Render and Vercel are connected to your GitHub repo, every push to your deploy branch will auto-deploy.
+
+Typical flow:
+
+```powershell
+git add .
+git commit -m "Stabilize local and deployment setup"
+git push origin main
+```
+
+If your hosted apps are already linked to the same GitHub branch, that push will automatically update Render and Vercel.
+
+## Notes
+
+- The backend now validates required env vars on startup.
+- The frontend now has safer session handling and route-level code splitting.
+- Currency display and demo UI text were cleaned up so the hosted app looks correct during explanation/demo.

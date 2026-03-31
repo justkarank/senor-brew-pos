@@ -12,11 +12,11 @@ const CARD_STYLE_BASE = {
 };
 
 const CATEGORY_BADGE = {
-  Coffee:        { bg: '#FBF3E4', color: '#92400E' },
-  Tea:           { bg: '#E6F0EF', color: '#103935' },
-  Snacks:        { bg: '#F3E8FF', color: '#5B21B6' },
+  Coffee: { bg: '#FBF3E4', color: '#92400E' },
+  Tea: { bg: '#E6F0EF', color: '#103935' },
+  Snacks: { bg: '#F3E8FF', color: '#5B21B6' },
   'Cold Drinks': { bg: '#DBEAFE', color: '#1E40AF' },
-  Other:         { bg: '#F1F5F9', color: '#475569' }
+  Other: { bg: '#F1F5F9', color: '#475569' }
 };
 
 function InventoryAlerts() {
@@ -57,7 +57,7 @@ function InventoryAlerts() {
     try {
       const res = await api.put(`/api/menu/${itemId}`, { stockQuantity: qty });
       setItems(prev => prev.map(item => item._id === itemId ? res.data : item));
-      setStockInputs(prev => { const n = { ...prev }; delete n[itemId]; return n; });
+      setStockInputs(prev => { const next = { ...prev }; delete next[itemId]; return next; });
       setSaved(prev => ({ ...prev, [itemId]: true }));
       setTimeout(() => setSaved(prev => ({ ...prev, [itemId]: false })), 2500);
       setError('');
@@ -73,7 +73,7 @@ function InventoryAlerts() {
   };
 
   const criticalItems = items.filter(i => i.stockQuantity < 5);
-  const lowItems      = items.filter(i => i.stockQuantity >= 5 && i.stockQuantity < 10);
+  const lowItems = items.filter(i => i.stockQuantity >= 5 && i.stockQuantity < 10);
 
   const getStockLevel = (qty) => {
     if (qty < 5) return {
@@ -112,8 +112,6 @@ function InventoryAlerts() {
 
   return (
     <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
-
-      {/* Header */}
       <div className="mb-6">
         <h2
           className="font-bold"
@@ -132,12 +130,11 @@ function InventoryAlerts() {
           <span className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: '#EF4444' }} />
           {error}
           <button onClick={() => setError('')} className="ml-auto">
-            <span style={{ fontSize: '16px' }}>×</span>
+            <span style={{ fontSize: '16px' }}>x</span>
           </button>
         </div>
       )}
 
-      {/* Critical Banner */}
       {criticalItems.length > 0 && (
         <div
           className="flex items-start gap-3 rounded-xl p-4 mb-4"
@@ -150,7 +147,7 @@ function InventoryAlerts() {
           <AlertOctagon size={18} style={{ color: '#EF4444', flexShrink: 0, marginTop: '1px' }} />
           <div>
             <p className="font-bold text-sm" style={{ color: '#991B1B' }}>
-              Critical Stock — Immediate Action Required
+              Critical Stock - Immediate Action Required
             </p>
             <p className="text-sm mt-0.5" style={{ color: '#DC2626' }}>
               <strong>{criticalItems.length}</strong> item{criticalItems.length !== 1 ? 's' : ''} below 5 units:{' '}
@@ -160,7 +157,6 @@ function InventoryAlerts() {
         </div>
       )}
 
-      {/* Low Stock Banner */}
       {lowItems.length > 0 && (
         <div
           className="flex items-start gap-3 rounded-xl p-4 mb-5"
@@ -174,16 +170,14 @@ function InventoryAlerts() {
           <div>
             <p className="font-bold text-sm" style={{ color: '#92400E' }}>Low Stock Warning</p>
             <p className="text-sm mt-0.5" style={{ color: '#B45309' }}>
-              <strong>{lowItems.length}</strong> item{lowItems.length !== 1 ? 's' : ''} running low (5–9 units):{' '}
+              <strong>{lowItems.length}</strong> item{lowItems.length !== 1 ? 's' : ''} running low (5-9 units):{' '}
               {lowItems.map(i => i.name).join(', ')}
             </p>
           </div>
         </div>
       )}
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
-        {/* Total Items */}
         <div
           className="p-6 transition-all duration-200"
           style={{ ...CARD_STYLE_BASE }}
@@ -198,7 +192,6 @@ function InventoryAlerts() {
           <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>In menu</p>
         </div>
 
-        {/* Low Stock */}
         <div
           className="p-6 transition-all duration-200"
           style={{ ...CARD_STYLE_BASE }}
@@ -210,10 +203,9 @@ function InventoryAlerts() {
           </div>
           <p className="font-semibold uppercase" style={{ color: '#8AADAA', fontSize: '11px', letterSpacing: '0.05em' }}>Low Stock</p>
           <p className="font-black mt-1" style={{ color: '#C9973A', fontSize: '36px', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{lowItems.length}</p>
-          <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>5 – 9 units</p>
+          <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>5 - 9 units</p>
         </div>
 
-        {/* Critical */}
         <div
           className="p-6 transition-all duration-200"
           style={{ ...CARD_STYLE_BASE }}
@@ -229,7 +221,6 @@ function InventoryAlerts() {
         </div>
       </div>
 
-      {/* Items Grid — empty state */}
       {items.length === 0 ? (
         <div
           className="text-center py-16 rounded-2xl"
@@ -259,7 +250,6 @@ function InventoryAlerts() {
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(16,57,53,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = CARD_SHADOW; e.currentTarget.style.transform = ''; }}
               >
-                {/* Top row */}
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="font-bold" style={{ color: '#0A1F1E', fontSize: '15px' }}>{item.name}</h3>
@@ -282,7 +272,6 @@ function InventoryAlerts() {
                   </span>
                 </div>
 
-                {/* Stock number + bar */}
                 <div className="mb-4">
                   <div className="flex justify-between items-baseline mb-2">
                     <span
@@ -312,7 +301,6 @@ function InventoryAlerts() {
 
                 <div style={{ borderTop: '1px solid #F0F5F4', marginBottom: '16px' }} />
 
-                {/* Update stock input */}
                 <div className="flex gap-2">
                   <input
                     type="number"
