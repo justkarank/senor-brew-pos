@@ -9,6 +9,19 @@ const app = express();
 const server = http.createServer(app);
 const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]?.trim());
+const PORT = process.env.PORT || 5000;
+const MONGO_RETRY_DELAY_MS = Number(process.env.MONGO_RETRY_DELAY_MS || 15000);
+const DB_STATE_LABELS = {
+  0: 'disconnected',
+  1: 'connected',
+  2: 'connecting',
+  3: 'disconnecting'
+};
+
+let mongoConnectPromise = null;
+let mongoReconnectTimer = null;
+let shuttingDown = false;
+let serverStarted = false;
 
 const localOriginHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const normalizeOrigin = (origin) => {
@@ -30,6 +43,8 @@ if (missingEnvVars.length > 0) {
   console.error('Create backend/.env from backend/.env.example and restart the server.');
   process.exit(1);
 }
+
+mongoose.set('bufferCommands', false);
 
 const isLocalOrigin = (origin) => {
   try {
@@ -61,7 +76,88 @@ const corsOptions = {
 };
 
 const io = new Server(server, { cors: corsOptions });
-const getDatabaseStatus = () => (mongoose.connection.readyState === 1 ? 'connected' : 'disconnected');
+const getDatabaseStatus = () => DB_STATE_LABELS[mongoose.connection.readyState] || 'unknown';
+const getDatabaseUnavailableMessage = () =>
+  'Database unavailable. The backend is running but cannot reach MongoDB Atlas right now. Check Atlas Network Access and MONGO_URI, then retry.';
+
+const logMongoConnectionHint = (err) => {
+  if (/whitelist|network access/i.test(err.message)) {
+    console.error('MongoDB Atlas is rejecting this connection. Add your current IP or 0.0.0.0/0 in Atlas Network Access.');
+  }
+  console.error('Check your MONGO_URI in backend/.env or Render env vars and verify Atlas Network Access settings.');
+};
+
+const scheduleMongoReconnect = () => {
+  if (shuttingDown || mongoReconnectTimer || mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
+    return;
+  }
+
+  console.warn(`Retrying MongoDB connection in ${Math.round(MONGO_RETRY_DELAY_MS / 1000)}s...`);
+  mongoReconnectTimer = setTimeout(() => {
+    mongoReconnectTimer = null;
+    connectToMongo().catch(() => {});
+  }, MONGO_RETRY_DELAY_MS);
+  mongoReconnectTimer.unref?.();
+};
+
+async function connectToMongo() {
+  if (shuttingDown) {
+    return null;
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (mongoConnectPromise) {
+    return mongoConnectPromise;
+  }
+
+  mongoConnectPromise = mongoose
+    .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
+    .then(() => {
+      console.log('Connected to MongoDB Atlas');
+      return mongoose.connection;
+    })
+    .catch((err) => {
+      console.error('MongoDB connection failed:', err.message);
+      logMongoConnectionHint(err);
+      scheduleMongoReconnect();
+      throw err;
+    })
+    .finally(() => {
+      mongoConnectPromise = null;
+    });
+
+  return mongoConnectPromise;
+}
+
+const requireDatabaseConnection = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: getDatabaseUnavailableMessage() });
+  }
+
+  return next();
+};
+
+mongoose.connection.on('disconnected', () => {
+  if (shuttingDown) {
+    return;
+  }
+
+  console.warn('MongoDB disconnected.');
+  scheduleMongoReconnect();
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB reconnected.');
+});
+
+mongoose.connection.on('error', (err) => {
+  if (!shuttingDown) {
+    console.error('MongoDB connection error:', err.message);
+  }
+});
 
 // Middleware
 app.use(cors(corsOptions));
@@ -79,18 +175,21 @@ app.use((req, res, next) => {
 // Make io accessible to route handlers
 app.set('io', io);
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/menu', require('./routes/menu'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/dashboard', require('./routes/dashboard'));
-
 // Health check
 app.get('/api/health', (req, res) => res.json({
   status: getDatabaseStatus() === 'connected' ? 'ok' : 'degraded',
   database: getDatabaseStatus(),
+  message: getDatabaseStatus() === 'connected'
+    ? 'MongoDB Atlas connection is healthy.'
+    : getDatabaseUnavailableMessage(),
   timestamp: new Date().toISOString()
 }));
+
+// Routes
+app.use('/api/auth', requireDatabaseConnection, require('./routes/auth'));
+app.use('/api/menu', requireDatabaseConnection, require('./routes/menu'));
+app.use('/api/orders', requireDatabaseConnection, require('./routes/orders'));
+app.use('/api/dashboard', requireDatabaseConnection, require('./routes/dashboard'));
 
 // 404 handler
 app.use((req, res) => {
@@ -113,13 +212,27 @@ io.on('connection', (socket) => {
 
 // Graceful shutdown
 const shutdown = () => {
+  shuttingDown = true;
+  if (mongoReconnectTimer) {
+    clearTimeout(mongoReconnectTimer);
+    mongoReconnectTimer = null;
+  }
+
   console.log('\nShutting down gracefully...');
-  server.close(() => {
+
+  const closeResources = () => {
     mongoose.connection.close().then(() => {
       console.log('Server and DB connection closed');
       process.exit(0);
     }).catch(() => process.exit(1));
-  });
+  };
+
+  if (serverStarted) {
+    server.close(closeResources);
+  } else {
+    closeResources();
+  }
+
   // Force exit after 10s if graceful shutdown hangs
   setTimeout(() => {
     console.error('Forced shutdown after timeout');
@@ -130,21 +243,8 @@ const shutdown = () => {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-// Connect to MongoDB then start server
-mongoose
-  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
-  .then(() => {
-    console.log('Connected to MongoDB Atlas');
-    const PORT = process.env.PORT || 5000;
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('MongoDB connection failed:', err.message);
-    if (/whitelist|network access/i.test(err.message)) {
-      console.error('MongoDB Atlas is rejecting this machine. Add your current IP or 0.0.0.0/0 in Atlas Network Access.');
-    }
-    console.error('Check your MONGO_URI in backend/.env and verify Atlas Network Access settings.');
-    process.exit(1);
-  });
+server.listen(PORT, '0.0.0.0', () => {
+  serverStarted = true;
+  console.log(`Server running on http://localhost:${PORT}`);
+  connectToMongo().catch(() => {});
+});

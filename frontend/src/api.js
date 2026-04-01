@@ -62,7 +62,7 @@ api.interceptors.response.use(
 );
 
 export const getApiErrorMessage = (error, fallbackMessage = 'Something went wrong. Please try again.') => {
-  if (error?.code === 'MISSING_API_CONFIGURATION') {
+  if (error?.code === 'MISSING_API_CONFIGURATION' || error?.code === 'DATABASE_UNAVAILABLE') {
     return error.message;
   }
 
