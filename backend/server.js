@@ -32,11 +32,34 @@ const normalizeOrigin = (origin) => {
   }
 };
 
-const configuredOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
+const parseOriginRule = (value) => {
+  const trimmedValue = value.trim().replace(/\/+$/, '');
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const wildcardMatch = trimmedValue.match(/^(https?):\/\/\*\.(.+)$/i);
+
+  if (wildcardMatch) {
+    return {
+      type: 'wildcard',
+      protocol: `${wildcardMatch[1].toLowerCase()}:`,
+      hostnameSuffix: `.${wildcardMatch[2].toLowerCase()}`
+    };
+  }
+
+  return {
+    type: 'exact',
+    origin: normalizeOrigin(trimmedValue)
+  };
+};
+
+const configuredOriginRules = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
-  .map(origin => normalizeOrigin(origin))
+  .map(origin => parseOriginRule(origin))
   .filter(Boolean);
-const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS === 'true';
+const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS !== 'false';
+const allowAllHttpsOrigins = configuredOriginRules.length === 0;
 
 if (missingEnvVars.length > 0) {
   console.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
@@ -45,6 +68,10 @@ if (missingEnvVars.length > 0) {
 }
 
 mongoose.set('bufferCommands', false);
+
+if (allowAllHttpsOrigins) {
+  console.warn('CLIENT_URLS is not configured. Allowing any HTTPS frontend origin until explicit origins are provided.');
+}
 
 const isLocalOrigin = (origin) => {
   try {
@@ -55,12 +82,34 @@ const isLocalOrigin = (origin) => {
   }
 };
 
+const matchesConfiguredOrigin = (origin) => configuredOriginRules.some((rule) => {
+  if (rule.type === 'exact') {
+    return rule.origin === origin;
+  }
+
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return protocol === rule.protocol && hostname.toLowerCase().endsWith(rule.hostnameSuffix);
+  } catch {
+    return false;
+  }
+});
+
+const isHttpsOrigin = (origin) => {
+  try {
+    return new URL(origin).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   const normalizedOrigin = normalizeOrigin(origin);
   if (isLocalOrigin(normalizedOrigin)) return true;
-  if (configuredOrigins.includes(normalizedOrigin)) return true;
+  if (matchesConfiguredOrigin(normalizedOrigin)) return true;
   if (allowVercelPreviews && /^https:\/\/.+\.vercel\.app$/.test(normalizedOrigin)) return true;
+  if (allowAllHttpsOrigins && isHttpsOrigin(normalizedOrigin)) return true;
   return false;
 };
 
@@ -72,7 +121,7 @@ const corsOptions = {
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
 };
 
 const io = new Server(server, { cors: corsOptions });
@@ -167,7 +216,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.url} ${res.statusCode} ${Date.now() - start}ms`);
+    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
   });
   next();
 });
@@ -243,7 +292,7 @@ const shutdown = () => {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   serverStarted = true;
   console.log(`Server running on http://localhost:${PORT}`);
   connectToMongo().catch(() => {});

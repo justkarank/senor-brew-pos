@@ -1,4 +1,4 @@
-const defaultLocalApiUrl = 'http://localhost:5000';
+const defaultLocalApiUrl = 'http://127.0.0.1:5000';
 const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
 const isBrowser = typeof window !== 'undefined';
 

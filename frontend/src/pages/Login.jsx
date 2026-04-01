@@ -51,7 +51,7 @@ function Login() {
     const token = getStoredToken();
     const user = getStoredUser();
     if (token && user) {
-      navigate(getDefaultRouteForRole(user.role));
+      navigate(getDefaultRouteForRole(user.role), { replace: true });
     }
   }, [navigate]);
 
@@ -107,9 +107,17 @@ function Login() {
   }, []);
 
   const saveSessionAndNavigate = (res) => {
+    const nextRoute = getDefaultRouteForRole(res.data.user.role);
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
-    navigate(getDefaultRouteForRole(res.data.user.role));
+
+    navigate(nextRoute, { replace: true });
+
+    window.setTimeout(() => {
+      if (window.location.pathname !== nextRoute) {
+        window.location.assign(nextRoute);
+      }
+    }, 150);
   };
 
   const submitLogin = (credentials) =>
@@ -476,6 +484,7 @@ function Login() {
               ].map(({ role, label, color }) => (
                 <button
                   key={role}
+                  type="button"
                   onClick={() => fillDemo(role)}
                   className="btn-press flex-1 text-xs py-2.5 px-2 rounded-xl font-semibold transition-all duration-200 border"
                   style={{ borderColor: color, color: color, backgroundColor: 'white' }}

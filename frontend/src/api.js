@@ -9,6 +9,8 @@ import { clearStoredSession, getStoredToken } from './utils/session';
 
 const DEFAULT_TIMEOUT_MS = 20000;
 const GET_RETRY_TIMEOUT_MS = 30000;
+const isWarmupRetryCandidate = (error) =>
+  isRecoverableNetworkError(error) || error.response?.status === 503;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -43,7 +45,7 @@ api.interceptors.response.use(
       requestMethod === 'get' &&
       !alreadyRetried &&
       !requestUrl.includes('/api/health') &&
-      isRecoverableNetworkError(error)
+      isWarmupRetryCandidate(error)
     ) {
       try {
         await warmUpBackend();
@@ -62,7 +64,11 @@ api.interceptors.response.use(
 );
 
 export const getApiErrorMessage = (error, fallbackMessage = 'Something went wrong. Please try again.') => {
-  if (error?.code === 'MISSING_API_CONFIGURATION' || error?.code === 'DATABASE_UNAVAILABLE') {
+  if (
+    error?.code === 'MISSING_API_CONFIGURATION' ||
+    error?.code === 'DATABASE_UNAVAILABLE' ||
+    error?.code === 'INVALID_BACKEND_RESPONSE'
+  ) {
     return error.message;
   }
 

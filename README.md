@@ -103,8 +103,8 @@ If you want localhost and the deployed site to reflect the same data, use the sa
 Copy `frontend/.env.example` to `frontend/.env` and set:
 
 ```env
-VITE_API_URL=http://localhost:5000
-VITE_SOCKET_URL=http://localhost:5000
+VITE_API_URL=http://127.0.0.1:5000
+VITE_SOCKET_URL=http://127.0.0.1:5000
 ```
 
 ### 3. Allow MongoDB Atlas access
@@ -200,7 +200,10 @@ http://localhost:5173,https://your-project.vercel.app,https://your-custom-domain
 
 ### Vercel Frontend
 
-Set the Vercel project root to `frontend`.
+You can deploy this repo to Vercel in either of these ways:
+
+- Point the Vercel project root to `frontend`
+- Or deploy the repo root directly; the root `vercel.json` now builds `frontend/dist` automatically
 
 Set these environment variables in Vercel:
 
