@@ -142,7 +142,7 @@ function BillingScreen() {
   return (
     <div className="page-enter flex flex-col lg:flex-row h-full" style={{ backgroundColor: '#F7F9F8' }}>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-        <div className="px-6 pt-6 pb-4" style={{ backgroundColor: '#F7F9F8' }}>
+        <div className="px-4 sm:px-6 pt-6 pb-4" style={{ backgroundColor: '#F7F9F8' }}>
           <h2
             className="font-bold"
             style={{ color: '#0A1F1E', fontSize: '28px', letterSpacing: '-0.3px' }}
@@ -213,7 +213,7 @@ function BillingScreen() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
           {filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <ShoppingCart size={44} className="mx-auto mb-3" style={{ color: '#E0ECEA' }} />
@@ -223,7 +223,7 @@ function BillingScreen() {
               <p className="text-xs mt-1" style={{ color: '#B0C8C5' }}>Try a different category or search term</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
               {filteredItems.map(item => {
                 const cartItem = cart.find(c => c._id === item._id);
                 const catColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
@@ -301,8 +301,8 @@ function BillingScreen() {
       </div>
 
       <div
-        className="w-full lg:w-80 flex flex-col shrink-0 max-h-[42vh] lg:max-h-none"
-        style={{ backgroundColor: 'white', borderTop: '1px solid #E0ECEA' }}
+        className="w-full lg:w-80 xl:w-96 flex flex-col shrink-0 max-h-[48vh] lg:max-h-none border-t lg:border-t-0 lg:border-l"
+        style={{ backgroundColor: 'white', borderColor: '#E0ECEA' }}
       >
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #E0ECEA' }}>
           <div className="flex items-center justify-between">
@@ -520,8 +520,8 @@ function BillingScreen() {
                 Token Number
               </p>
               <p
-                className="font-black leading-none"
-                style={{ color: '#C9973A', fontSize: '72px', letterSpacing: '-2px' }}
+                className="font-black leading-none text-[60px] sm:text-[72px]"
+                style={{ color: '#C9973A', letterSpacing: '-2px' }}
               >
                 #{successOrder.tokenNumber}
               </p>

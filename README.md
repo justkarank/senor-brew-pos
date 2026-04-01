@@ -96,6 +96,8 @@ CLIENT_URLS=http://localhost:5173
 ALLOW_VERCEL_PREVIEWS=true
 ```
 
+If you want localhost and the deployed site to reflect the same data, use the same Atlas cluster and database name in your local `MONGO_URI` and in Render.
+
 ### 2. Create frontend env
 
 Copy `frontend/.env.example` to `frontend/.env` and set:
@@ -209,12 +211,16 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 
 `frontend/vercel.json` already handles SPA rewrites for React Router.
 
+If `VITE_API_URL` or `VITE_SOCKET_URL` is missing in Vercel, the frontend now shows a clear configuration warning on the login screen instead of failing with a vague backend error.
+
 ### MongoDB Atlas
 
 Make sure Atlas allows connections from:
 
 - your local machine during development
 - your Render backend in production
+
+If localhost cannot connect, Atlas Network Access is the first thing to check. The current app now already reports this clearly on backend startup.
 
 If you want the easiest setup for demo purposes, use `0.0.0.0/0` in Atlas Network Access.
 
@@ -235,5 +241,8 @@ If your hosted apps are already linked to the same GitHub branch, that push will
 ## Notes
 
 - The backend now validates required env vars on startup.
+- The login screen now wakes the Render backend before sign-in and retries transient connection failures once, which helps with free-tier cold starts.
+- GET requests retry once after a backend warm-up check when the server was temporarily unreachable.
+- CORS origin matching now normalizes configured URLs, so entries with trailing slashes in `CLIENT_URLS` do not break production requests.
 - The frontend now has safer session handling and route-level code splitting.
 - Currency display and demo UI text were cleaned up so the hosted app looks correct during explanation/demo.

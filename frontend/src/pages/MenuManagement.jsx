@@ -147,8 +147,8 @@ function MenuManagement() {
   }
 
   return (
-    <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
-      <div className="flex justify-between items-start mb-6">
+    <div className="page-enter p-4 sm:p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
+      <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
         <div>
           <h2
             className="font-bold"
@@ -162,7 +162,7 @@ function MenuManagement() {
         </div>
         <button
           onClick={openAddForm}
-          className="btn-press flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200"
+          className="btn-press flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 w-full sm:w-auto"
           style={{ backgroundColor: '#103935', boxShadow: '0 4px 12px rgba(16,57,53,0.25)' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0A2422'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#103935'}
@@ -213,8 +213,122 @@ function MenuManagement() {
         })}
       </div>
 
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div
+            className="rounded-2xl px-5 py-12 text-center"
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #E0ECEA',
+              boxShadow: CARD_SHADOW
+            }}
+          >
+            <UtensilsCrossed size={40} className="mx-auto mb-3" style={{ color: '#E0ECEA' }} />
+            <p className="text-sm font-semibold" style={{ color: '#8AADAA' }}>
+              {filterCategory === 'All' ? 'No menu items yet' : `No ${filterCategory} items`}
+            </p>
+            <p className="text-xs mt-1" style={{ color: '#B0C8C5' }}>
+              {filterCategory === 'All' ? 'Tap "Add New Item" to get started' : 'Try a different category filter'}
+            </p>
+          </div>
+        ) : (
+          filtered.map(item => {
+            const badge = CATEGORY_BADGE[item.category] || CATEGORY_BADGE.Other;
+            const stockColor = item.stockQuantity < 5 ? '#EF4444' : item.stockQuantity < 10 ? '#C9973A' : '#10B981';
+
+            return (
+              <div
+                key={`mobile-${item._id}`}
+                className="rounded-2xl p-4"
+                style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #E0ECEA',
+                  boxShadow: CARD_SHADOW
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-base" style={{ color: '#0A1F1E' }}>{item.name}</p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        style={{ backgroundColor: badge.bg, color: badge.color }}
+                      >
+                        {item.category}
+                      </span>
+                      <span className="text-sm font-bold" style={{ color: '#C9973A' }}>
+                        {formatCurrency(item.price)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEditForm(item)}
+                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                      style={{ backgroundColor: '#DBEAFE', border: '1px solid #BFDBFE' }}
+                      title="Edit Item"
+                    >
+                      <Pencil size={14} style={{ color: '#2563EB' }} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item._id, item.name)}
+                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                      style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}
+                      title="Delete Item"
+                    >
+                      <Trash2 size={14} style={{ color: '#EF4444' }} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div
+                    className="rounded-xl px-3 py-2"
+                    style={{ backgroundColor: '#F7F9F8', border: '1px solid #F0F5F4' }}
+                  >
+                    <p className="text-[11px] font-semibold uppercase" style={{ color: '#8AADAA', letterSpacing: '0.05em' }}>
+                      Stock
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: stockColor }} />
+                      <span className="font-bold text-sm" style={{ color: stockColor }}>
+                        {item.stockQuantity}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="rounded-xl px-3 py-2"
+                    style={{ backgroundColor: '#F7F9F8', border: '1px solid #F0F5F4' }}
+                  >
+                    <p className="text-[11px] font-semibold uppercase" style={{ color: '#8AADAA', letterSpacing: '0.05em' }}>
+                      Available
+                    </p>
+                    <button
+                      onClick={() => handleToggleAvailability(item)}
+                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 mt-2"
+                      style={{ backgroundColor: item.isAvailable ? '#103935' : '#CBD5E1' }}
+                      title={item.isAvailable ? 'Click to mark unavailable' : 'Click to mark available'}
+                      aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
+                    >
+                      <span
+                        className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200"
+                        style={{
+                          transform: item.isAvailable ? 'translateX(24px)' : 'translateX(4px)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.20)'
+                        }}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <div
-        className="overflow-hidden"
+        className="hidden md:block overflow-hidden"
         style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -349,7 +463,7 @@ function MenuManagement() {
           onClick={(e) => { if (e.target === e.currentTarget) closeForm(); }}
         >
           <div
-            className="w-full max-w-md card-enter"
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto card-enter"
             style={{
               backgroundColor: 'white',
               borderRadius: '24px',
@@ -411,7 +525,7 @@ function MenuManagement() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1.5" style={{ color: '#0A1F1E', fontSize: '14px' }}>Price (INR) *</label>
                   <input
@@ -483,7 +597,7 @@ function MenuManagement() {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <button
                   type="button"
                   onClick={closeForm}

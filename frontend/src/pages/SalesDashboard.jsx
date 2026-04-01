@@ -123,7 +123,7 @@ function SalesDashboard() {
   const maxOrders = hasChartData ? Math.max(...chartData.map(d => d.orders)) : 0;
 
   return (
-    <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
+    <div className="page-enter p-4 sm:p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
       <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#8AADAA', letterSpacing: '0.08em' }}>
@@ -151,7 +151,7 @@ function SalesDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
@@ -275,7 +275,55 @@ function SalesDashboard() {
             <p className="text-xs mt-1" style={{ color: '#B0C8C5' }}>Start billing to see orders here</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="md:hidden p-4 space-y-3">
+              {stats.orders.map(order => {
+                const badge = STATUS_BADGE[order.status] || STATUS_BADGE.pending;
+                return (
+                  <div
+                    key={`mobile-${order._id}`}
+                    className="rounded-2xl p-4"
+                    style={{ backgroundColor: '#F7F9F8', border: '1px solid #E0ECEA' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-lg" style={{ color: '#0A1F1E' }}>
+                          #{order.tokenNumber}
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>
+                          {formatTime(order.createdAt)}
+                        </p>
+                      </div>
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-semibold capitalize"
+                        style={{
+                          backgroundColor: badge.bg,
+                          color: badge.color,
+                          border: `1px solid ${badge.border}`
+                        }}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+
+                    <p className="text-sm mt-3 leading-6" style={{ color: '#4A6B69' }}>
+                      {order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1px solid #E0ECEA' }}>
+                      <span className="text-xs font-semibold uppercase" style={{ color: '#8AADAA', letterSpacing: '0.05em' }}>
+                        Total
+                      </span>
+                      <span className="font-bold text-sm" style={{ color: '#C9973A' }}>
+                        {formatCurrency(order.total)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead style={{ backgroundColor: '#F7F9F8', borderBottom: '1px solid #E0ECEA' }}>
                 <tr>
@@ -338,7 +386,8 @@ function SalesDashboard() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

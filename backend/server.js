@@ -11,9 +11,17 @@ const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]?.trim());
 
 const localOriginHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+const normalizeOrigin = (origin) => {
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return origin.trim().replace(/\/+$/, '');
+  }
+};
+
 const configuredOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
-  .map(origin => origin.trim())
+  .map(origin => normalizeOrigin(origin))
   .filter(Boolean);
 const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS === 'true';
 
@@ -34,9 +42,10 @@ const isLocalOrigin = (origin) => {
 
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  if (isLocalOrigin(origin)) return true;
-  if (configuredOrigins.includes(origin)) return true;
-  if (allowVercelPreviews && /^https:\/\/.+\.vercel\.app$/.test(origin)) return true;
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (isLocalOrigin(normalizedOrigin)) return true;
+  if (configuredOrigins.includes(normalizedOrigin)) return true;
+  if (allowVercelPreviews && /^https:\/\/.+\.vercel\.app$/.test(normalizedOrigin)) return true;
   return false;
 };
 

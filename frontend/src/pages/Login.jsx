@@ -2,13 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../api';
 import { Mail, Lock, Activity, LineChart, Wallet } from 'lucide-react';
+import { API_URL, IS_LOCAL_HOST, NEEDS_REMOTE_API_CONFIGURATION } from '../config';
+import {
+  getBackendConnectionMessage,
+  getMissingApiConfigurationMessage,
+  isRecoverableNetworkError,
+  warmUpBackend
+} from '../utils/backendConnection';
 import { getDefaultRouteForRole, getStoredToken, getStoredUser } from '../utils/session';
+
+const LOGIN_TIMEOUT_MS = 30000;
+const BACKEND_STATUS_STYLES = {
+  checking: {
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+    accent: '#C9973A',
+    label: 'Checking backend connection...'
+  },
+  waking: {
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    accent: '#2563EB',
+    label: 'Waking up backend on Render free tier...'
+  },
+  ready: {
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    accent: '#10B981',
+    label: 'Backend connected'
+  },
+  error: {
+    bg: '#FEF2F2',
+    border: '#FECACA',
+    accent: '#EF4444',
+    label: 'Backend connection issue'
+  }
+};
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [backendState, setBackendState] = useState({ status: 'checking', message: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,16 +55,140 @@ function Login() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    let active = true;
+
+    const primeBackend = async () => {
+      if (NEEDS_REMOTE_API_CONFIGURATION) {
+        if (active) {
+          setBackendState({
+            status: 'error',
+            message: getMissingApiConfigurationMessage()
+          });
+        }
+        return;
+      }
+
+      if (active) {
+        setBackendState({
+          status: 'checking',
+          message: IS_LOCAL_HOST
+            ? 'Checking local backend connection.'
+            : 'Checking Render backend status before you sign in.'
+        });
+      }
+
+      try {
+        await warmUpBackend({ timeout: IS_LOCAL_HOST ? 8000 : 45000 });
+        if (active) {
+          setBackendState({
+            status: 'ready',
+            message: `${API_URL || 'Current origin'} responded successfully.`
+          });
+        }
+      } catch (err) {
+        if (active) {
+          setBackendState({
+            status: 'error',
+            message: getBackendConnectionMessage(
+              err,
+              'Unable to confirm the backend connection right now.'
+            )
+          });
+        }
+      }
+    };
+
+    primeBackend();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const saveSessionAndNavigate = (res) => {
+    localStorage.setItem('token', res.data.token);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    navigate(getDefaultRouteForRole(res.data.user.role));
+  };
+
+  const submitLogin = (credentials) =>
+    api.post('/api/auth/login', credentials, { timeout: LOGIN_TIMEOUT_MS });
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
-      const res = await api.post('/api/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate(getDefaultRouteForRole(res.data.user.role));
+      if (NEEDS_REMOTE_API_CONFIGURATION) {
+        const configError = new Error(getMissingApiConfigurationMessage());
+        configError.code = 'MISSING_API_CONFIGURATION';
+        throw configError;
+      }
+
+      if (backendState.status !== 'ready') {
+        setBackendState({
+          status: 'waking',
+          message: IS_LOCAL_HOST
+            ? 'Connecting to the local backend before logging in.'
+            : 'Waking up the Render backend. The first request can take up to a minute on the free plan.'
+        });
+
+        await warmUpBackend();
+        setBackendState({
+          status: 'ready',
+          message: 'Backend is awake and ready for login.'
+        });
+      }
+
+      const res = await submitLogin({ email, password });
+      saveSessionAndNavigate(res);
     } catch (err) {
+      if (isRecoverableNetworkError(err)) {
+        try {
+          setBackendState({
+            status: 'waking',
+            message: 'Retrying after a backend warm-up check.'
+          });
+
+          await warmUpBackend();
+          const retryRes = await submitLogin({ email, password });
+          setBackendState({
+            status: 'ready',
+            message: 'Backend recovered successfully.'
+          });
+          saveSessionAndNavigate(retryRes);
+          return;
+        } catch (retryErr) {
+          setBackendState({
+            status: 'error',
+            message: getBackendConnectionMessage(
+              retryErr,
+              'The backend is still unreachable after retrying.'
+            )
+          });
+          setError(
+            getApiErrorMessage(
+              retryErr,
+              'Login failed because the backend could not be reached.'
+            )
+          );
+          return;
+        }
+      }
+
+      setBackendState(current =>
+        current.status === 'ready'
+          ? current
+          : {
+              status: 'error',
+              message: getBackendConnectionMessage(
+                err,
+                'The backend connection could not be confirmed.'
+              )
+            }
+      );
       setError(getApiErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
@@ -45,6 +205,8 @@ function Login() {
     setPassword(creds[role].password);
     setError('');
   };
+
+  const statusStyle = BACKEND_STATUS_STYLES[backendState.status] || BACKEND_STATUS_STYLES.checking;
 
   return (
     <div className="min-h-screen flex">
@@ -183,7 +345,7 @@ function Login() {
       </div>
 
       <div
-        className="flex-1 flex items-center justify-center p-8"
+        className="flex-1 flex items-center justify-center p-6 sm:p-8"
         style={{ backgroundColor: 'white' }}
       >
         <div className="w-full max-w-sm">
@@ -204,6 +366,26 @@ function Login() {
             Sign in to continue
           </h2>
           <p className="text-sm mb-8" style={{ color: '#4A6B69' }}>Enter your credentials to access the system</p>
+
+          <div
+            className="rounded-2xl px-4 py-3 mb-5"
+            style={{ backgroundColor: statusStyle.bg, border: `1px solid ${statusStyle.border}` }}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
+                style={{ backgroundColor: statusStyle.accent }}
+              />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#0A1F1E' }}>
+                  {statusStyle.label}
+                </p>
+                <p className="text-xs mt-1" style={{ color: '#4A6B69' }}>
+                  {backendState.message}
+                </p>
+              </div>
+            </div>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -286,7 +468,7 @@ function Login() {
             >
               Quick Demo Access
             </p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
                 { role: 'admin', label: 'Admin', color: '#103935' },
                 { role: 'counter', label: 'Counter', color: '#1E40AF' },

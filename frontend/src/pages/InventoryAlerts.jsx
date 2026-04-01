@@ -111,7 +111,7 @@ function InventoryAlerts() {
   }
 
   return (
-    <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
+    <div className="page-enter p-4 sm:p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
       <div className="mb-6">
         <h2
           className="font-bold"

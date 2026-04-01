@@ -111,7 +111,7 @@ function KitchenScreen() {
   const completedOrders = sortedOrders.filter(o => o.status === 'ready');
 
   return (
-    <div className="page-enter p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
+    <div className="page-enter p-4 sm:p-6 min-h-full" style={{ backgroundColor: '#F7F9F8' }}>
       <div
         className="flex justify-between items-center px-6 py-4 mb-6 flex-wrap gap-3"
         style={{
