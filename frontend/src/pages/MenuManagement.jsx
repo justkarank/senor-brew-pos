@@ -73,8 +73,8 @@ function MenuManagement() {
       setError('Valid price is required.');
       return;
     }
-    if (form.stockQuantity === '' || Number(form.stockQuantity) < 0) {
-      setError('Valid stock quantity is required.');
+    if (form.stockQuantity === '' || !Number.isInteger(Number(form.stockQuantity)) || Number(form.stockQuantity) < 0) {
+      setError('Stock quantity must be a whole number 0 or greater.');
       return;
     }
 
@@ -116,12 +116,19 @@ function MenuManagement() {
   };
 
   const handleToggleAvailability = async (item) => {
+    if (!item.isAvailable && item.stockQuantity === 0) {
+      setError('Cannot mark an item as available when stock is 0. Restock it first.');
+      return;
+    }
+
     try {
       const res = await api.put(
         `/api/menu/${item._id}`,
         { isAvailable: !item.isAvailable }
       );
       setItems(prev => prev.map(i => (i._id === item._id ? res.data : i)));
+      showSuccess(`${item.name} marked ${res.data.isAvailable ? 'available' : 'unavailable'}.`);
+      setError('');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to update availability.'));
     }
@@ -554,6 +561,7 @@ function MenuManagement() {
                     onBlur={e => { e.target.style.borderColor = '#E0ECEA'; e.target.style.boxShadow = 'none'; }}
                     placeholder="0"
                     min="0"
+                    step="1"
                     required
                   />
                   <p className="text-xs mt-1" style={{ color: '#8AADAA' }}>Alert below 10 units</p>

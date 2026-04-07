@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { requireAuth } = require('../middleware/auth');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -37,6 +38,11 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// GET /api/auth/me
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ user: req.user });
 });
 
 module.exports = router;

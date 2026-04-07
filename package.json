@@ -10,6 +10,7 @@
     "backend": "npm --prefix backend run dev",
     "frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
-    "seed": "npm --prefix backend run seed"
+    "seed": "npm --prefix backend run seed",
+    "verify": "node scripts/verify.mjs"
   }
 }

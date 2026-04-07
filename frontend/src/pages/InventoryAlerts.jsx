@@ -46,8 +46,8 @@ function InventoryAlerts() {
     if (newQty === undefined || newQty === '') return;
 
     const qty = Number(newQty);
-    if (isNaN(qty) || qty < 0) {
-      setError('Please enter a valid positive quantity.');
+    if (!Number.isInteger(qty) || qty < 0) {
+      setError('Please enter a whole number 0 or greater.');
       return;
     }
 
@@ -305,6 +305,7 @@ function InventoryAlerts() {
                   <input
                     type="number"
                     min="0"
+                    step="1"
                     value={stockInputs[item._id] ?? ''}
                     onChange={(e) => setStockInputs(prev => ({ ...prev, [item._id]: e.target.value }))}
                     onKeyDown={(e) => handleStockKeyDown(e, item._id)}

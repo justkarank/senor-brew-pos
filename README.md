@@ -153,6 +153,7 @@ npm run backend
 npm run frontend
 npm run build
 npm run seed
+npm run verify
 ```
 
 Direct commands if needed:
@@ -170,6 +171,7 @@ npm run dev
 ## Main API Routes
 
 - `POST /api/auth/login`
+- `GET /api/auth/me`
 - `GET /api/menu`
 - `GET /api/menu/available`
 - `POST /api/menu`

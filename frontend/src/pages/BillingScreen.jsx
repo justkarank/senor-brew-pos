@@ -70,11 +70,24 @@ function BillingScreen() {
   };
 
   const addToCart = useCallback((item) => {
+    let stockMessage = '';
+
     setCart(prev => {
       const existing = prev.find(c => c._id === item._id);
-      if (existing) return prev.map(c => c._id === item._id ? { ...c, quantity: c.quantity + 1 } : c);
+
+      if (existing && existing.quantity >= item.stockQuantity) {
+        stockMessage = `${item.name} has only ${item.stockQuantity} left in stock.`;
+        return prev;
+      }
+
+      if (existing) {
+        return prev.map(c => c._id === item._id ? { ...c, quantity: c.quantity + 1 } : c);
+      }
+
       return [...prev, { ...item, quantity: 1 }];
     });
+
+    setError(stockMessage);
   }, []);
 
   const decrementFromCart = useCallback((itemId) => {
@@ -273,6 +286,9 @@ function BillingScreen() {
                       >
                         {item.category}
                       </span>
+                      <p className="text-xs mt-2" style={{ color: '#8AADAA' }}>
+                        {item.stockQuantity} left in stock
+                      </p>
                     </div>
                     <div className="flex justify-between items-center mt-3">
                       <span className="font-black text-sm" style={{ color: '#C9973A' }}>{formatCurrency(item.price)}</span>

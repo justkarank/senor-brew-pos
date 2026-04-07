@@ -9,9 +9,20 @@ import {
   isRecoverableNetworkError,
   warmUpBackend
 } from '../utils/backendConnection';
-import { getDefaultRouteForRole, getStoredToken, getStoredUser } from '../utils/session';
+import {
+  getDefaultRouteForRole,
+  getStoredSession,
+  setStoredSession
+} from '../utils/session';
+import {
+  getSessionValidationErrorMessage,
+  markSessionValidated,
+  validateStoredSession
+} from '../utils/authSession';
 
 const LOGIN_TIMEOUT_MS = 30000;
+const isLoginRetryCandidate = (error) =>
+  isRecoverableNetworkError(error) || [502, 503, 504].includes(error?.response?.status);
 const BACKEND_STATUS_STYLES = {
   checking: {
     bg: '#FFFBEB',
@@ -44,15 +55,53 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [restoringSession, setRestoringSession] = useState(true);
   const [backendState, setBackendState] = useState({ status: 'checking', message: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = getStoredToken();
-    const user = getStoredUser();
-    if (token && user) {
-      navigate(getDefaultRouteForRole(user.role), { replace: true });
-    }
+    let active = true;
+
+    const restoreSession = async () => {
+      const session = getStoredSession();
+
+      if (!session) {
+        if (active) {
+          setRestoringSession(false);
+        }
+        return;
+      }
+
+      try {
+        const result = await validateStoredSession();
+
+        if (!active) {
+          return;
+        }
+
+        if (result.valid) {
+          navigate(getDefaultRouteForRole(result.user.role), { replace: true });
+          return;
+        }
+      } catch (sessionError) {
+        if (active) {
+          setBackendState({
+            status: 'error',
+            message: getSessionValidationErrorMessage(sessionError)
+          });
+        }
+      } finally {
+        if (active) {
+          setRestoringSession(false);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -108,8 +157,8 @@ function Login() {
 
   const saveSessionAndNavigate = (res) => {
     const nextRoute = getDefaultRouteForRole(res.data.user.role);
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
+    setStoredSession(res.data.token, res.data.user);
+    markSessionValidated(res.data.token, res.data.user);
 
     navigate(nextRoute, { replace: true });
 
@@ -150,10 +199,11 @@ function Login() {
         });
       }
 
-      const res = await submitLogin({ email, password });
+      const credentials = { email: email.trim(), password };
+      const res = await submitLogin(credentials);
       saveSessionAndNavigate(res);
     } catch (err) {
-      if (isRecoverableNetworkError(err)) {
+      if (isLoginRetryCandidate(err)) {
         try {
           setBackendState({
             status: 'waking',
@@ -161,7 +211,7 @@ function Login() {
           });
 
           await warmUpBackend();
-          const retryRes = await submitLogin({ email, password });
+          const retryRes = await submitLogin({ email: email.trim(), password });
           setBackendState({
             status: 'ready',
             message: 'Backend recovered successfully.'
@@ -456,7 +506,7 @@ function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || restoringSession}
               className="btn-press w-full h-12 rounded-xl font-bold text-sm text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               style={{
                 backgroundColor: '#103935',
@@ -465,7 +515,7 @@ function Login() {
               onMouseEnter={e => { if (!loading) e.currentTarget.style.backgroundColor = '#0A2422'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#103935'; }}
             >
-              {loading ? 'Signing in...' : 'Sign In ->'}
+              {restoringSession ? 'Checking saved session...' : loading ? 'Signing in...' : 'Sign In ->'}
             </button>
           </form>
 
