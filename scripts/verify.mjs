@@ -319,7 +319,7 @@ try {
   await runCommand(npmCommand, ['--prefix', 'frontend', 'run', 'build'], rootDir);
 
   console.log('Seeding fresh demo data...');
-  await runCommand(npmCommand, ['--prefix', 'backend', 'run', 'seed'], rootDir);
+  await runCommand(npmCommand, ['--prefix', 'backend', 'run', 'seed', '--', '--reset'], rootDir);
   seededOnce = true;
 
   console.log('Starting backend for smoke checks...');
@@ -347,7 +347,7 @@ try {
   if (seededOnce) {
     try {
       console.log('\nRestoring fresh demo data after verification...');
-      await runCommand(npmCommand, ['--prefix', 'backend', 'run', 'seed'], rootDir);
+      await runCommand(npmCommand, ['--prefix', 'backend', 'run', 'seed', '--', '--reset'], rootDir);
     } catch (error) {
       console.error(`Failed to restore demo data: ${error.message}`);
       process.exitCode = 1;

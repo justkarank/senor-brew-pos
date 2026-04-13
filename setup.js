@@ -59,7 +59,7 @@ ensureBackendEnv();
 
 run('Installing backend dependencies...', getInstallCommand(BACKEND_DIR), BACKEND_DIR);
 run('Installing frontend dependencies...', getInstallCommand(FRONTEND_DIR), FRONTEND_DIR);
-run('Seeding database with demo users, menu items, and orders...', 'node seed.js', BACKEND_DIR);
+run('Ensuring demo users, menu items, and daily orders are present...', 'node seed.js', BACKEND_DIR);
 
 console.log('\n========================================');
 console.log('Setup complete');

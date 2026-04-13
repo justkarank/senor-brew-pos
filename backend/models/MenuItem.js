@@ -9,7 +9,8 @@ const menuItemSchema = new mongoose.Schema({
   },
   price: { type: Number, required: true, min: 0 },
   stockQuantity: { type: Number, default: 0, min: 0 },
-  isAvailable: { type: Boolean, default: true }
+  isAvailable: { type: Boolean, default: true },
+  demoKey: { type: String, trim: true }
 }, { timestamps: true });
 
 menuItemSchema.pre('save', function updateAvailabilityFromStock(next) {
@@ -24,5 +25,12 @@ menuItemSchema.pre('save', function updateAvailabilityFromStock(next) {
 menuItemSchema.index({ category: 1 });
 menuItemSchema.index({ isAvailable: 1 });
 menuItemSchema.index({ category: 1, name: 1 });
+menuItemSchema.index(
+  { demoKey: 1 },
+  {
+    unique: true,
+    sparse: true
+  }
+);
 
 module.exports = mongoose.model('MenuItem', menuItemSchema);

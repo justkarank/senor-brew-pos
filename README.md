@@ -1,6 +1,6 @@
 # Senor Brew Club
 
-Senor Brew Club is a full-stack cafe POS and management system built for a BCA major project. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with seeded demo data.
+Senor Brew Club is a full-stack cafe POS and management system built for a BCA major project. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with permanent demo data.
 
 ## Features
 
@@ -10,7 +10,7 @@ Senor Brew Club is a full-stack cafe POS and management system built for a BCA m
 - Menu CRUD with availability and stock validation
 - Inventory alerts with inline restocking
 - Sales dashboard with revenue, orders, top item, hourly chart, and order history
-- Seeded demo users, menu items, and sample orders for presentation
+- Permanent demo users, menu items, and daily sample orders for presentation
 
 ## Roles
 
@@ -75,12 +75,13 @@ senorbrew/
 
 ## Demo Data
 
-The seed script creates:
+The demo bootstrap creates and preserves:
 
 - 3 users
 - 15 menu items
-- 30 demo orders
+- 30 demo orders for the current business day
 - active kitchen orders for live workflow demo
+- existing real data unless you explicitly run a reset
 
 ## Local Setup
 
@@ -123,7 +124,7 @@ From the project root:
 npm run setup
 ```
 
-This installs backend and frontend dependencies and seeds the demo database.
+This installs backend and frontend dependencies and safely fills in the demo database without deleting existing data.
 
 ### 5. Run locally
 
@@ -153,6 +154,7 @@ npm run backend
 npm run frontend
 npm run build
 npm run seed
+npm run seed -- --reset
 npm run verify
 ```
 
@@ -218,6 +220,8 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 
 If `VITE_API_URL` or `VITE_SOCKET_URL` is missing in Vercel, the frontend now shows a clear configuration warning on the login screen instead of failing with a vague backend error.
 
+The backend also auto-fills missing demo data on startup by default so the dashboard and kitchen screens stay populated on future days. Set `ENABLE_DEMO_BOOTSTRAP=false` if you want to turn that off.
+
 ### MongoDB Atlas
 
 Make sure Atlas allows connections from:
@@ -246,6 +250,7 @@ If your hosted apps are already linked to the same GitHub branch, that push will
 ## Notes
 
 - The backend now validates required env vars on startup.
+- `npm run seed` is now non-destructive; use `npm run seed -- --reset` only when you intentionally want a full fresh demo rebuild.
 - The login screen now wakes the Render backend before sign-in and retries transient connection failures once, which helps with free-tier cold starts.
 - GET requests retry once after a backend warm-up check when the server was temporarily unreachable.
 - CORS origin matching now normalizes configured URLs, so entries with trailing slashes in `CLIENT_URLS` do not break production requests.

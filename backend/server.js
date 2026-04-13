@@ -4,6 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const { ensureDemoData } = require('./services/demoDataService');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,6 +12,7 @@ const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]?.trim());
 const PORT = process.env.PORT || 5000;
 const MONGO_RETRY_DELAY_MS = Number(process.env.MONGO_RETRY_DELAY_MS || 15000);
+const enableDemoBootstrap = process.env.ENABLE_DEMO_BOOTSTRAP !== 'false';
 const DB_STATE_LABELS = {
   0: 'disconnected',
   1: 'connected',
@@ -164,8 +166,17 @@ async function connectToMongo() {
 
   mongoConnectPromise = mongoose
     .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
-    .then(() => {
+    .then(async () => {
       console.log('Connected to MongoDB Atlas');
+
+      if (enableDemoBootstrap) {
+        try {
+          await ensureDemoData({ log: console.log });
+        } catch (seedError) {
+          console.error('Demo bootstrap failed:', seedError.message);
+        }
+      }
+
       return mongoose.connection;
     })
     .catch((err) => {

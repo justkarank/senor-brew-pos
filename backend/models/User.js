@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'counter', 'kitchen'], default: 'counter' }
+  role: { type: String, enum: ['admin', 'counter', 'kitchen'], default: 'counter' },
+  demoKey: { type: String, trim: true }
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
@@ -17,5 +18,13 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.index(
+  { demoKey: 1 },
+  {
+    unique: true,
+    sparse: true
+  }
+);
 
 module.exports = mongoose.model('User', userSchema);

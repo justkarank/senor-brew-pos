@@ -15,6 +15,8 @@ const orderSchema = new mongoose.Schema({
   discount: { type: Number, default: 0, min: 0 },
   gst: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
+  isDemo: { type: Boolean, default: false },
+  demoKey: { type: String, trim: true },
   status: {
     type: String,
     enum: ['pending', 'preparing', 'ready'],
@@ -35,5 +37,15 @@ orderSchema.index(
   }
 );
 orderSchema.index({ orderDateKey: 1, createdAt: -1 });
+orderSchema.index(
+  { orderDateKey: 1, demoKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      orderDateKey: { $type: 'string' },
+      demoKey: { $type: 'string' }
+    }
+  }
+);
 
 module.exports = mongoose.model('Order', orderSchema);
