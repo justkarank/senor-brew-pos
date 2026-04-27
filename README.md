@@ -1,6 +1,6 @@
 # Senor Brew Club
 
-Senor Brew Club is a full-stack cafe POS and management system built for a BCA major project. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with permanent demo data.
+Senor Brew Club is a full-stack cafe POS and management system built for the Senor Brew Club Cafe Business. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with permanent demo data.
 
 ## Features
 
