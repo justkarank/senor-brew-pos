@@ -8,7 +8,9 @@ const isValidStoredUser = (value) =>
     typeof value.id === 'string' &&
     typeof value.name === 'string' &&
     typeof value.email === 'string' &&
-    VALID_ROLES.has(value.role)
+    VALID_ROLES.has(value.role) &&
+    (value.isDemo === undefined || typeof value.isDemo === 'boolean') &&
+    (value.canWrite === undefined || typeof value.canWrite === 'boolean')
   );
 
 const parseJwtPayload = (token) => {
@@ -88,6 +90,11 @@ export const getStoredToken = () => {
 
 export const getStoredUser = () => {
   return getStoredSession()?.user || null;
+};
+
+export const canCurrentUserWrite = () => {
+  const user = getStoredUser();
+  return user?.canWrite !== false;
 };
 
 export const clearStoredSession = () => {

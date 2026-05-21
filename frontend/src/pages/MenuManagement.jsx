@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api, { getApiErrorMessage } from '../api';
 import { Plus, Pencil, Trash2, X, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
+import ReadOnlyNotice from '../components/ReadOnlyNotice';
+import { canCurrentUserWrite } from '../utils/session';
 
 const CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
 const emptyForm = { name: '', category: 'Coffee', price: '', stockQuantity: '', isAvailable: true };
@@ -26,6 +28,7 @@ function MenuManagement() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
+  const canWrite = canCurrentUserWrite();
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -53,8 +56,23 @@ function MenuManagement() {
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
-  const openAddForm = () => { setForm(emptyForm); setEditingId(null); setShowForm(true); setError(''); };
+  const openAddForm = () => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to add menu items.');
+      return;
+    }
+
+    setForm(emptyForm);
+    setEditingId(null);
+    setShowForm(true);
+    setError('');
+  };
   const openEditForm = (item) => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to edit menu items.');
+      return;
+    }
+
     setForm({ name: item.name, category: item.category, price: item.price, stockQuantity: item.stockQuantity, isAvailable: item.isAvailable });
     setEditingId(item._id);
     setShowForm(true);
@@ -64,6 +82,11 @@ function MenuManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to save menu changes.');
+      return;
+    }
 
     if (!form.name.trim()) {
       setError('Item name is required.');
@@ -105,6 +128,11 @@ function MenuManagement() {
   };
 
   const handleDelete = async (id, name) => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to delete menu items.');
+      return;
+    }
+
     if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
     try {
       await api.delete(`/api/menu/${id}`);
@@ -116,6 +144,11 @@ function MenuManagement() {
   };
 
   const handleToggleAvailability = async (item) => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to change availability.');
+      return;
+    }
+
     if (!item.isAvailable && item.stockQuantity === 0) {
       setError('Cannot mark an item as available when stock is 0. Restock it first.');
       return;
@@ -169,15 +202,22 @@ function MenuManagement() {
         </div>
         <button
           onClick={openAddForm}
-          className="btn-press flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 w-full sm:w-auto"
+          disabled={!canWrite}
+          className="btn-press flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#103935', boxShadow: '0 4px 12px rgba(16,57,53,0.25)' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0A2422'}
+          onMouseEnter={e => { if (canWrite) e.currentTarget.style.backgroundColor = '#0A2422'; }}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#103935'}
         >
           <Plus size={16} strokeWidth={2.5} />
-          Add New Item
+          {canWrite ? 'Add New Item' : 'Read-only Demo'}
         </button>
       </div>
+
+      {!canWrite && (
+        <div className="mb-4">
+          <ReadOnlyNotice message="Demo menu management is read-only. Menu data can be viewed, but edits are blocked." />
+        </div>
+      )}
 
       {error && !showForm && (
         <div
@@ -271,7 +311,8 @@ function MenuManagement() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEditForm(item)}
-                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                      disabled={!canWrite}
+                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: '#DBEAFE', border: '1px solid #BFDBFE' }}
                       title="Edit Item"
                     >
@@ -279,7 +320,8 @@ function MenuManagement() {
                     </button>
                     <button
                       onClick={() => handleDelete(item._id, item.name)}
-                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                      disabled={!canWrite}
+                      className="btn-press w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}
                       title="Delete Item"
                     >
@@ -313,7 +355,8 @@ function MenuManagement() {
                     </p>
                     <button
                       onClick={() => handleToggleAvailability(item)}
-                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 mt-2"
+                      disabled={!canWrite}
+                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 mt-2 disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: item.isAvailable ? '#103935' : '#CBD5E1' }}
                       title={item.isAvailable ? 'Click to mark unavailable' : 'Click to mark available'}
                       aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
@@ -416,7 +459,8 @@ function MenuManagement() {
                       <td className="px-6">
                         <button
                           onClick={() => handleToggleAvailability(item)}
-                          className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200"
+                          disabled={!canWrite}
+                          className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                           style={{ backgroundColor: item.isAvailable ? '#103935' : '#CBD5E1' }}
                           title={item.isAvailable ? 'Click to mark unavailable' : 'Click to mark available'}
                           aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
@@ -434,9 +478,10 @@ function MenuManagement() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => openEditForm(item)}
-                            className="btn-press w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200"
+                            disabled={!canWrite}
+                            className="btn-press w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ backgroundColor: '#DBEAFE', border: '1px solid #BFDBFE' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#BFDBFE'}
+                            onMouseEnter={e => { if (canWrite) e.currentTarget.style.backgroundColor = '#BFDBFE'; }}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#DBEAFE'}
                             title="Edit Item"
                           >
@@ -444,9 +489,10 @@ function MenuManagement() {
                           </button>
                           <button
                             onClick={() => handleDelete(item._id, item.name)}
-                            className="btn-press w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200"
+                            disabled={!canWrite}
+                            className="btn-press w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FECACA'}
+                            onMouseEnter={e => { if (canWrite) e.currentTarget.style.backgroundColor = '#FECACA'; }}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FEE2E2'}
                             title="Delete Item"
                           >

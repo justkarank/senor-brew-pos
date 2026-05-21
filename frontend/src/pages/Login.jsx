@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../api';
 import { Mail, Lock, Activity, LineChart, Wallet } from 'lucide-react';
-import { API_URL, IS_LOCAL_HOST, NEEDS_REMOTE_API_CONFIGURATION } from '../config';
+import { API_URL, ENABLE_DEMO_LOGIN, IS_LOCAL_HOST, NEEDS_REMOTE_API_CONFIGURATION } from '../config';
 import {
   getBackendConnectionMessage,
   getMissingApiConfigurationMessage,
@@ -55,6 +55,7 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoadingRole, setDemoLoadingRole] = useState('');
   const [restoringSession, setRestoringSession] = useState(true);
   const [backendState, setBackendState] = useState({ status: 'checking', message: '' });
   const navigate = useNavigate();
@@ -172,32 +173,38 @@ function Login() {
   const submitLogin = (credentials) =>
     api.post('/api/auth/login', credentials, { timeout: LOGIN_TIMEOUT_MS });
 
+  const ensureBackendReadyForLogin = async (message) => {
+    if (NEEDS_REMOTE_API_CONFIGURATION) {
+      const configError = new Error(getMissingApiConfigurationMessage());
+      configError.code = 'MISSING_API_CONFIGURATION';
+      throw configError;
+    }
+
+    if (backendState.status !== 'ready') {
+      setBackendState({
+        status: 'waking',
+        message
+      });
+
+      await warmUpBackend();
+      setBackendState({
+        status: 'ready',
+        message: 'Backend is awake and ready for login.'
+      });
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      if (NEEDS_REMOTE_API_CONFIGURATION) {
-        const configError = new Error(getMissingApiConfigurationMessage());
-        configError.code = 'MISSING_API_CONFIGURATION';
-        throw configError;
-      }
-
-      if (backendState.status !== 'ready') {
-        setBackendState({
-          status: 'waking',
-          message: IS_LOCAL_HOST
-            ? 'Connecting to the local backend before logging in.'
-            : 'Waking up the Render backend. The first request can take up to a minute on the free plan.'
-        });
-
-        await warmUpBackend();
-        setBackendState({
-          status: 'ready',
-          message: 'Backend is awake and ready for login.'
-        });
-      }
+      await ensureBackendReadyForLogin(
+        IS_LOCAL_HOST
+          ? 'Connecting to the local backend before logging in.'
+          : 'Waking up the Render backend. The first request can take up to a minute on the free plan.'
+      );
 
       const credentials = { email: email.trim(), password };
       const res = await submitLogin(credentials);
@@ -253,15 +260,35 @@ function Login() {
     }
   };
 
-  const fillDemo = (role) => {
-    const creds = {
-      admin: { email: 'admin@senorbrew.com', password: 'admin123' },
-      counter: { email: 'counter@senorbrew.com', password: 'counter123' },
-      kitchen: { email: 'kitchen@senorbrew.com', password: 'kitchen123' }
-    };
-    setEmail(creds[role].email);
-    setPassword(creds[role].password);
+  const handleDemoLogin = async (role) => {
     setError('');
+    setDemoLoadingRole(role);
+
+    try {
+      await ensureBackendReadyForLogin(
+        IS_LOCAL_HOST
+          ? 'Connecting to the local backend before opening demo access.'
+          : 'Waking up the Render backend before opening demo access.'
+      );
+
+      const res = await api.post('/api/auth/demo', { role }, { timeout: LOGIN_TIMEOUT_MS });
+      saveSessionAndNavigate(res);
+    } catch (err) {
+      setBackendState(current =>
+        current.status === 'ready'
+          ? current
+          : {
+              status: 'error',
+              message: getBackendConnectionMessage(
+                err,
+                'The backend connection could not be confirmed.'
+              )
+            }
+      );
+      setError(getApiErrorMessage(err, 'Demo login is unavailable right now.'));
+    } finally {
+      setDemoLoadingRole('');
+    }
   };
 
   const statusStyle = BACKEND_STATUS_STYLES[backendState.status] || BACKEND_STATUS_STYLES.checking;
@@ -506,7 +533,7 @@ function Login() {
 
             <button
               type="submit"
-              disabled={loading || restoringSession}
+              disabled={loading || restoringSession || Boolean(demoLoadingRole)}
               className="btn-press w-full h-12 rounded-xl font-bold text-sm text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               style={{
                 backgroundColor: '#103935',
@@ -519,36 +546,39 @@ function Login() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5" style={{ borderTop: '1px solid #F0F5F4' }}>
-            <p
-              className="font-semibold uppercase text-center mb-3"
-              style={{ color: '#8AADAA', fontSize: '11px', letterSpacing: '0.08em' }}
-            >
-              Quick Demo Access
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {[
-                { role: 'admin', label: 'Admin', color: '#103935' },
-                { role: 'counter', label: 'Counter', color: '#1E40AF' },
-                { role: 'kitchen', label: 'Kitchen', color: '#5B21B6' }
-              ].map(({ role, label, color }) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => fillDemo(role)}
-                  className="btn-press flex-1 text-xs py-2.5 px-2 rounded-xl font-semibold transition-all duration-200 border"
-                  style={{ borderColor: color, color: color, backgroundColor: 'white' }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = `${color}12`; }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; }}
-                >
-                  {label}
-                </button>
-              ))}
+          {ENABLE_DEMO_LOGIN && (
+            <div className="mt-6 pt-5" style={{ borderTop: '1px solid #F0F5F4' }}>
+              <p
+                className="font-semibold uppercase text-center mb-3"
+                style={{ color: '#8AADAA', fontSize: '11px', letterSpacing: '0.08em' }}
+              >
+                Read-only Demo
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { role: 'admin', label: 'Admin', color: '#103935' },
+                  { role: 'counter', label: 'Counter', color: '#1E40AF' },
+                  { role: 'kitchen', label: 'Kitchen', color: '#5B21B6' }
+                ].map(({ role, label, color }) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => handleDemoLogin(role)}
+                    disabled={loading || restoringSession || Boolean(demoLoadingRole)}
+                    className="btn-press flex-1 text-xs py-2.5 px-2 rounded-xl font-semibold transition-all duration-200 border disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ borderColor: color, color: color, backgroundColor: 'white' }}
+                    onMouseEnter={e => { if (!demoLoadingRole) e.currentTarget.style.backgroundColor = `${color}12`; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; }}
+                  >
+                    {demoLoadingRole === role ? 'Opening...' : label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-center mt-3" style={{ color: '#B0C8C5' }}>
+                Demo sessions can view the app without changing shared data
+              </p>
             </div>
-            <p className="text-xs text-center mt-3" style={{ color: '#B0C8C5' }}>
-              Tap a role to prefill credentials
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>

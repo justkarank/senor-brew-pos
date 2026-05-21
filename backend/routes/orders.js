@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const { requireAuth, allowRoles } = require('../middleware/auth');
+const { requireAuth, allowRoles, requireWriteAccess } = require('../middleware/auth');
 const { getBusinessDayOrderFilter } = require('../utils/businessDate');
 const { createOrder } = require('../services/orderService');
 
@@ -18,7 +18,7 @@ router.get('/today', allowRoles('admin', 'kitchen'), async (req, res) => {
   }
 });
 
-router.post('/', allowRoles('admin', 'counter'), async (req, res) => {
+router.post('/', allowRoles('admin', 'counter'), requireWriteAccess, async (req, res) => {
   try {
     const order = await createOrder({
       items: req.body.items,
@@ -46,7 +46,7 @@ router.post('/', allowRoles('admin', 'counter'), async (req, res) => {
   }
 });
 
-router.put('/:id/status', allowRoles('admin', 'kitchen'), async (req, res) => {
+router.put('/:id/status', allowRoles('admin', 'kitchen'), requireWriteAccess, async (req, res) => {
   try {
     const { status } = req.body;
 

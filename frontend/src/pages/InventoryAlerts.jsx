@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api, { getApiErrorMessage } from '../api';
 import { Package, AlertOctagon, AlertTriangle, CheckCircle2, Save } from 'lucide-react';
+import ReadOnlyNotice from '../components/ReadOnlyNotice';
+import { canCurrentUserWrite } from '../utils/session';
 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
 
@@ -26,6 +28,7 @@ function InventoryAlerts() {
   const [stockInputs, setStockInputs] = useState({});
   const [saving, setSaving] = useState({});
   const [saved, setSaved] = useState({});
+  const canWrite = canCurrentUserWrite();
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -42,6 +45,11 @@ function InventoryAlerts() {
   };
 
   const updateStock = async (itemId) => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to update stock.');
+      return;
+    }
+
     const newQty = stockInputs[itemId];
     if (newQty === undefined || newQty === '') return;
 
@@ -121,6 +129,12 @@ function InventoryAlerts() {
         </h2>
         <p className="text-sm mt-1" style={{ color: '#4A6B69' }}>Monitor and restock item levels</p>
       </div>
+
+      {!canWrite && (
+        <div className="mb-4">
+          <ReadOnlyNotice message="Demo inventory is read-only. Stock levels can be viewed, but restocking is blocked." />
+        </div>
+      )}
 
       {error && (
         <div
@@ -310,6 +324,7 @@ function InventoryAlerts() {
                     onChange={(e) => setStockInputs(prev => ({ ...prev, [item._id]: e.target.value }))}
                     onKeyDown={(e) => handleStockKeyDown(e, item._id)}
                     placeholder="New qty"
+                    disabled={!canWrite}
                     className="flex-1 px-3 h-10 rounded-xl text-sm outline-none transition-all duration-200"
                     style={{ border: '1px solid #E0ECEA', color: '#0A1F1E' }}
                     onFocus={e => { e.target.style.borderColor = '#103935'; e.target.style.boxShadow = '0 0 0 3px rgba(16,57,53,0.10)'; }}
@@ -317,10 +332,10 @@ function InventoryAlerts() {
                   />
                   <button
                     onClick={() => updateStock(item._id)}
-                    disabled={saving[item._id] || stockInputs[item._id] === undefined || stockInputs[item._id] === ''}
+                    disabled={!canWrite || saving[item._id] || stockInputs[item._id] === undefined || stockInputs[item._id] === ''}
                     className="btn-press px-4 h-10 rounded-xl text-sm font-semibold text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                     style={{ backgroundColor: '#103935' }}
-                    onMouseEnter={e => { if (!saving[item._id]) e.currentTarget.style.backgroundColor = '#0A2422'; }}
+                    onMouseEnter={e => { if (canWrite && !saving[item._id]) e.currentTarget.style.backgroundColor = '#0A2422'; }}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#103935'}
                   >
                     {saving[item._id] ? (

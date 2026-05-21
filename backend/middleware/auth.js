@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { getBooleanEnv } = require('../utils/env');
+
+const isDemoWriteAllowed = () => getBooleanEnv('DEMO_WRITE_ACCESS', false);
 
 const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -12,7 +15,7 @@ const requireAuth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('_id name email role');
+    const user = await User.findById(decoded.id).select('_id name email role demoKey');
 
     if (!user) {
       return res.status(401).json({ message: 'Authentication failed. User no longer exists.' });
@@ -22,7 +25,9 @@ const requireAuth = async (req, res, next) => {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      isDemo: Boolean(user.demoKey),
+      canWrite: !user.demoKey || isDemoWriteAllowed()
     };
 
     next();
@@ -43,7 +48,22 @@ const allowRoles = (...roles) => (req, res, next) => {
   next();
 };
 
+const requireWriteAccess = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required. Please log in again.' });
+  }
+
+  if (req.user.isDemo && !isDemoWriteAllowed()) {
+    return res.status(403).json({
+      message: 'Demo access is read-only. Sign in with a private staff account to make changes.'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   requireAuth,
-  allowRoles
+  allowRoles,
+  requireWriteAccess
 };

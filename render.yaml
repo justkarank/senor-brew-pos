@@ -9,11 +9,29 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: Owner Admin
       - key: CLIENT_URLS
         sync: false
       - key: ALLOW_VERCEL_PREVIEWS
-        value: true
+        value: false
+      - key: ALLOW_ANY_HTTPS_ORIGIN
+        value: false
+      - key: ENABLE_DEMO_BOOTSTRAP
+        value: false
+      - key: DEMO_ACCESS_ENABLED
+        value: false
+      - key: DEMO_WRITE_ACCESS
+        value: false
+      - key: DEMO_PASSWORD_LOGIN_ENABLED
+        value: false

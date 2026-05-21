@@ -59,7 +59,7 @@ ensureBackendEnv();
 
 run('Installing backend dependencies...', getInstallCommand(BACKEND_DIR), BACKEND_DIR);
 run('Installing frontend dependencies...', getInstallCommand(FRONTEND_DIR), FRONTEND_DIR);
-run('Ensuring demo users, menu items, and daily orders are present...', 'node seed.js', BACKEND_DIR);
+run('Ensuring safe demo data and optional private admin are present...', 'node seed.js', BACKEND_DIR);
 
 console.log('\n========================================');
 console.log('Setup complete');
@@ -72,7 +72,6 @@ console.log('  Terminal 2 (Frontend):');
 console.log('    cd senorbrew/frontend');
 console.log('    npm run dev\n');
 console.log('  Then open: http://localhost:5173\n');
-console.log('Login Credentials:');
-console.log('  Admin:   admin@senorbrew.com   / admin123');
-console.log('  Counter: counter@senorbrew.com / counter123');
-console.log('  Kitchen: kitchen@senorbrew.com / kitchen123\n');
+console.log('Login:');
+console.log('  Private admin: set ADMIN_EMAIL and ADMIN_PASSWORD in backend/.env.');
+console.log('  Read-only demo: enable DEMO_ACCESS_ENABLED in backend/.env and VITE_ENABLE_DEMO_LOGIN in frontend/.env.\n');

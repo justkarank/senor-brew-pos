@@ -1,6 +1,6 @@
 # Senor Brew Club
 
-Senor Brew Club is a full-stack cafe POS and management system built for the Senor Brew Club Cafe Business. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, and a sales dashboard with permanent demo data.
+Senor Brew Club is a full-stack cafe POS and management system built for the Senor Brew Club Cafe Business. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, sales dashboard, and a public-safe read-only demo mode.
 
 ## Features
 
@@ -10,7 +10,8 @@ Senor Brew Club is a full-stack cafe POS and management system built for the Sen
 - Menu CRUD with availability and stock validation
 - Inventory alerts with inline restocking
 - Sales dashboard with revenue, orders, top item, hourly chart, and order history
-- Permanent demo users, menu items, and daily sample orders for presentation
+- Optional read-only demo users, menu items, and daily sample orders for presentation
+- Private admin bootstrap through deployment environment variables
 
 ## Roles
 
@@ -65,13 +66,16 @@ senorbrew/
 `-- README.md
 ```
 
-## Demo Credentials
+## Public Demo Safety
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@senorbrew.com` | `admin123` |
-| Counter | `counter@senorbrew.com` | `counter123` |
-| Kitchen | `kitchen@senorbrew.com` | `kitchen123` |
+Do not publish shared writable credentials. Demo password login is disabled by default, and demo users are read-only unless you explicitly set `DEMO_WRITE_ACCESS=true`.
+
+For a public portfolio/demo deployment:
+
+- Set a private owner login in Render with `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+- Keep `DEMO_WRITE_ACCESS=false`.
+- Enable public demo buttons only if you want visitors to view the app: set `DEMO_ACCESS_ENABLED=true`, `ENABLE_DEMO_BOOTSTRAP=true`, and `VITE_ENABLE_DEMO_LOGIN=true`.
+- Use a separate MongoDB database for demo data if you also use this app for real cafe operations.
 
 ## Demo Data
 
@@ -94,7 +98,13 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_secure_jwt_secret
 PORT=5000
 CLIENT_URLS=http://localhost:5173
-ALLOW_VERCEL_PREVIEWS=true
+ALLOW_VERCEL_PREVIEWS=false
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=use_a_private_12_plus_character_password
+ENABLE_DEMO_BOOTSTRAP=true
+DEMO_ACCESS_ENABLED=true
+DEMO_WRITE_ACCESS=false
+DEMO_PASSWORD_LOGIN_ENABLED=false
 ```
 
 If you want localhost and the deployed site to reflect the same data, use the same Atlas cluster and database name in your local `MONGO_URI` and in Render.
@@ -106,6 +116,7 @@ Copy `frontend/.env.example` to `frontend/.env` and set:
 ```env
 VITE_API_URL=http://127.0.0.1:5000
 VITE_SOCKET_URL=http://127.0.0.1:5000
+VITE_ENABLE_DEMO_LOGIN=true
 ```
 
 ### 3. Allow MongoDB Atlas access
@@ -173,6 +184,7 @@ npm run dev
 ## Main API Routes
 
 - `POST /api/auth/login`
+- `POST /api/auth/demo`
 - `GET /api/auth/me`
 - `GET /api/menu`
 - `GET /api/menu/available`
@@ -193,13 +205,21 @@ npm run dev
 
 - `MONGO_URI`
 - `JWT_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
 - `CLIENT_URLS`
-- `ALLOW_VERCEL_PREVIEWS=true`
+- `NODE_ENV=production`
+- `ALLOW_VERCEL_PREVIEWS=false`
+- `ALLOW_ANY_HTTPS_ORIGIN=false`
+- `ENABLE_DEMO_BOOTSTRAP=false` for private production, or `true` for a public read-only demo database
+- `DEMO_ACCESS_ENABLED=false` for private production, or `true` for public read-only demo access
+- `DEMO_WRITE_ACCESS=false`
+- `DEMO_PASSWORD_LOGIN_ENABLED=false`
 
 Recommended `CLIENT_URLS` value:
 
 ```env
-http://localhost:5173,https://your-project.vercel.app,https://your-custom-domain.com
+https://your-project.vercel.app,https://your-custom-domain.com
 ```
 
 ### Vercel Frontend
@@ -214,13 +234,14 @@ Set these environment variables in Vercel:
 ```env
 VITE_API_URL=https://your-backend.onrender.com
 VITE_SOCKET_URL=https://your-backend.onrender.com
+VITE_ENABLE_DEMO_LOGIN=false
 ```
 
 `frontend/vercel.json` already handles SPA rewrites for React Router.
 
 If `VITE_API_URL` or `VITE_SOCKET_URL` is missing in Vercel, the frontend now shows a clear configuration warning on the login screen instead of failing with a vague backend error.
 
-The backend also auto-fills missing demo data on startup by default so the dashboard and kitchen screens stay populated on future days. Set `ENABLE_DEMO_BOOTSTRAP=false` if you want to turn that off.
+The backend no longer auto-fills demo data in production unless `ENABLE_DEMO_BOOTSTRAP=true`. Demo login buttons only appear when `VITE_ENABLE_DEMO_LOGIN=true`, and the backend must also have `DEMO_ACCESS_ENABLED=true`.
 
 ### MongoDB Atlas
 
@@ -231,7 +252,7 @@ Make sure Atlas allows connections from:
 
 If localhost cannot connect, Atlas Network Access is the first thing to check. The current app now already reports this clearly on backend startup.
 
-If you want the easiest setup for demo purposes, use `0.0.0.0/0` in Atlas Network Access.
+If you want the easiest setup for demo purposes, use `0.0.0.0/0` in Atlas Network Access. For a real production system, use the strictest allowlist your host supports.
 
 ## GitHub Auto Deploy Flow
 
@@ -250,6 +271,8 @@ If your hosted apps are already linked to the same GitHub branch, that push will
 ## Notes
 
 - The backend now validates required env vars on startup.
+- Public demo access is read-only by default, and demo password login is disabled unless explicitly enabled with private env passwords.
+- CORS now requires exact `CLIENT_URLS` in production instead of falling back to every HTTPS origin.
 - `npm run seed` is now non-destructive; use `npm run seed -- --reset` only when you intentionally want a full fresh demo rebuild.
 - The login screen now wakes the Render backend before sign-in and retries transient connection failures once, which helps with free-tier cold starts.
 - GET requests retry once after a backend warm-up check when the server was temporarily unreachable.

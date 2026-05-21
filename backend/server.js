@@ -4,7 +4,8 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
-const { ensureDemoData } = require('./services/demoDataService');
+const { ensureAdminUser, ensureDemoData } = require('./services/demoDataService');
+const { getBooleanEnv } = require('./utils/env');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,13 +13,23 @@ const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]?.trim());
 const PORT = process.env.PORT || 5000;
 const MONGO_RETRY_DELAY_MS = Number(process.env.MONGO_RETRY_DELAY_MS || 15000);
-const enableDemoBootstrap = process.env.ENABLE_DEMO_BOOTSTRAP !== 'false';
+const isProduction = process.env.NODE_ENV === 'production';
+const enableDemoBootstrap = getBooleanEnv('ENABLE_DEMO_BOOTSTRAP', !isProduction);
 const DB_STATE_LABELS = {
   0: 'disconnected',
   1: 'connected',
   2: 'connecting',
   3: 'disconnecting'
 };
+const INSECURE_JWT_SECRETS = new Set([
+  'your_secure_jwt_secret',
+  'your_secure_jwt_secret_here',
+  'your_strong_secret_key_here_change_this',
+  'change_me',
+  'secret',
+  'jwt_secret'
+]);
+const MIN_JWT_SECRET_LENGTH = 32;
 
 let mongoConnectPromise = null;
 let mongoReconnectTimer = null;
@@ -60,8 +71,8 @@ const configuredOriginRules = (process.env.CLIENT_URLS || process.env.CLIENT_URL
   .split(',')
   .map(origin => parseOriginRule(origin))
   .filter(Boolean);
-const allowVercelPreviews = process.env.ALLOW_VERCEL_PREVIEWS !== 'false';
-const allowAllHttpsOrigins = configuredOriginRules.length === 0;
+const allowVercelPreviews = getBooleanEnv('ALLOW_VERCEL_PREVIEWS', false);
+const allowAllHttpsOrigins = getBooleanEnv('ALLOW_ANY_HTTPS_ORIGIN', false);
 
 if (missingEnvVars.length > 0) {
   console.error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
@@ -69,10 +80,39 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
+const validateSecurityConfig = () => {
+  const jwtSecret = process.env.JWT_SECRET.trim();
+  const jwtSecretIsWeak =
+    jwtSecret.length < MIN_JWT_SECRET_LENGTH ||
+    INSECURE_JWT_SECRETS.has(jwtSecret.toLowerCase());
+
+  if (!jwtSecretIsWeak) {
+    return;
+  }
+
+  const message = `JWT_SECRET must be a unique random value with at least ${MIN_JWT_SECRET_LENGTH} characters.`;
+
+  if (isProduction) {
+    console.error(message);
+    process.exit(1);
+  }
+
+  console.warn(message);
+};
+
+validateSecurityConfig();
 mongoose.set('bufferCommands', false);
 
+if (configuredOriginRules.length === 0 && !allowVercelPreviews && !allowAllHttpsOrigins) {
+  console.warn('CLIENT_URLS is not configured. Browser requests from deployed frontends will be blocked until explicit origins are provided.');
+}
+
+if (allowVercelPreviews) {
+  console.warn('ALLOW_VERCEL_PREVIEWS is enabled. Any *.vercel.app origin can reach this API; use exact CLIENT_URLS for production.');
+}
+
 if (allowAllHttpsOrigins) {
-  console.warn('CLIENT_URLS is not configured. Allowing any HTTPS frontend origin until explicit origins are provided.');
+  console.warn('ALLOW_ANY_HTTPS_ORIGIN is enabled. This should only be used for temporary testing.');
 }
 
 const isLocalOrigin = (origin) => {
@@ -169,12 +209,27 @@ async function connectToMongo() {
     .then(async () => {
       console.log('Connected to MongoDB Atlas');
 
+      try {
+        const adminBootstrap = await ensureAdminUser({ log: console.log });
+
+        if (!adminBootstrap.configured && isProduction) {
+          console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are not configured. Create a private admin account before disabling demo access.');
+        }
+      } catch (bootstrapError) {
+        console.error('Private admin bootstrap failed:', bootstrapError.message);
+        if (isProduction) {
+          throw bootstrapError;
+        }
+      }
+
       if (enableDemoBootstrap) {
         try {
           await ensureDemoData({ log: console.log });
         } catch (seedError) {
           console.error('Demo bootstrap failed:', seedError.message);
         }
+      } else {
+        console.log('Demo bootstrap disabled.');
       }
 
       return mongoose.connection;
@@ -220,8 +275,10 @@ mongoose.connection.on('error', (err) => {
 });
 
 // Middleware
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '25kb' }));
 
 // Basic request logger
 app.use((req, res, next) => {

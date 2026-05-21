@@ -2,6 +2,7 @@ const User = require('../models/User');
 const MenuItem = require('../models/MenuItem');
 const Order = require('../models/Order');
 const Counter = require('../models/Counter');
+const crypto = require('crypto');
 const {
   DEMO_USERS,
   DEMO_MENU_ITEMS,
@@ -9,6 +10,7 @@ const {
   DEMO_ACTIVE_ORDER_TEMPLATES
 } = require('../data/demoCatalog');
 const { BUSINESS_UTC_OFFSET, getBusinessDateKey } = require('../utils/businessDate');
+const { getTrimmedEnv } = require('../utils/env');
 const {
   calculateSubtotal,
   calculateTotalsFromDiscountAmount
@@ -16,6 +18,23 @@ const {
 
 const noop = () => {};
 const DEMO_MENU_NAME_TO_KEY = new Map(DEMO_MENU_ITEMS.map(item => [item.name, item.demoKey]));
+const DEMO_PASSWORD_ENV_BY_ROLE = {
+  admin: 'DEMO_ADMIN_PASSWORD',
+  counter: 'DEMO_COUNTER_PASSWORD',
+  kitchen: 'DEMO_KITCHEN_PASSWORD'
+};
+
+const randomPassword = () => crypto.randomBytes(32).toString('base64url');
+
+const getConfiguredDemoPassword = (role) => {
+  const envName = DEMO_PASSWORD_ENV_BY_ROLE[role];
+  return envName ? getTrimmedEnv(envName) : '';
+};
+
+const buildDemoUserDocument = (user) => ({
+  ...user,
+  password: getConfiguredDemoPassword(user.role) || randomPassword()
+});
 
 const buildSummary = () => ({
   usersCreated: 0,
@@ -47,33 +66,94 @@ const makeRelativeTimestamp = (orderDateKey, now, minutesAgo) => {
 };
 
 async function linkExistingUsers() {
-  let linked = 0;
-
-  for (const user of DEMO_USERS) {
-    const result = await User.updateOne(
-      { email: user.email, demoKey: { $exists: false } },
-      { $set: { demoKey: user.demoKey } }
-    );
-
-    linked += result.modifiedCount;
-  }
-
-  return linked;
+  return 0;
 }
 
 async function ensureUsers(summary) {
   summary.usersLinked += await linkExistingUsers();
 
   for (const user of DEMO_USERS) {
-    const existingUser = await User.findOne({ demoKey: user.demoKey }).select('_id');
+    const existingUser = await User.findOne({ demoKey: user.demoKey });
 
     if (existingUser) {
+      const configuredPassword = getConfiguredDemoPassword(user.role);
+      let changed = false;
+
+      ['name', 'email', 'role'].forEach((field) => {
+        if (existingUser[field] !== user[field]) {
+          existingUser[field] = user[field];
+          changed = true;
+        }
+      });
+
+      if (configuredPassword) {
+        existingUser.password = configuredPassword;
+        changed = true;
+      }
+
+      if (changed) {
+        await existingUser.save();
+      }
+
       continue;
     }
 
-    await User.create(user);
+    const existingEmailOwner = await User.findOne({ email: user.email }).select('_id demoKey');
+    if (existingEmailOwner) {
+      continue;
+    }
+
+    await User.create(buildDemoUserDocument(user));
     summary.usersCreated += 1;
   }
+}
+
+async function ensureAdminUser(options = {}) {
+  const { log = noop } = options;
+  const email = getTrimmedEnv('ADMIN_EMAIL').toLowerCase();
+  const password = getTrimmedEnv('ADMIN_PASSWORD');
+  const name = getTrimmedEnv('ADMIN_NAME') || 'Owner Admin';
+
+  if (!email && !password) {
+    return { configured: false, created: false, updated: false };
+  }
+
+  if (!email || !password) {
+    throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must both be set to bootstrap a private admin account.');
+  }
+
+  if (password.length < 12) {
+    throw new Error('ADMIN_PASSWORD must be at least 12 characters long.');
+  }
+
+  if (DEMO_USERS.some(user => user.email === email)) {
+    throw new Error('ADMIN_EMAIL cannot use one of the demo account email addresses.');
+  }
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser?.demoKey) {
+    throw new Error('ADMIN_EMAIL cannot use one of the demo account email addresses.');
+  }
+
+  if (existingUser) {
+    existingUser.name = name;
+    existingUser.role = 'admin';
+    existingUser.password = password;
+    await existingUser.save();
+    log(`Private admin account updated: ${email}`);
+    return { configured: true, created: false, updated: true };
+  }
+
+  await User.create({
+    name,
+    email,
+    password,
+    role: 'admin'
+  });
+  log(`Private admin account created: ${email}`);
+
+  return { configured: true, created: true, updated: false };
 }
 
 async function linkExistingMenuItems() {
@@ -279,5 +359,7 @@ async function ensureDemoData(options = {}) {
 }
 
 module.exports = {
-  ensureDemoData
+  ensureDemoData,
+  ensureAdminUser,
+  getConfiguredDemoPassword
 };

@@ -19,3 +19,4 @@ export const IS_LOCAL_HOST = isBrowser && localHosts.has(window.location.hostnam
 export const NEEDS_REMOTE_API_CONFIGURATION = isBrowser && !IS_LOCAL_HOST && !configuredApiUrl;
 export const API_URL = configuredApiUrl || getFallbackApiUrl();
 export const SOCKET_URL = configuredSocketUrl || API_URL;
+export const ENABLE_DEMO_LOGIN = import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';

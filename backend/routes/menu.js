@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const MenuItem = require('../models/MenuItem');
-const { requireAuth, allowRoles } = require('../middleware/auth');
+const { requireAuth, allowRoles, requireWriteAccess } = require('../middleware/auth');
 
 const VALID_CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
 const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -115,7 +115,7 @@ router.get('/available', allowRoles('admin', 'counter'), async (req, res) => {
   }
 });
 
-router.post('/', allowRoles('admin'), async (req, res) => {
+router.post('/', allowRoles('admin'), requireWriteAccess, async (req, res) => {
   try {
     const payload = buildMenuPayload(req.body);
 
@@ -153,7 +153,7 @@ router.post('/', allowRoles('admin'), async (req, res) => {
   }
 });
 
-router.put('/:id', allowRoles('admin'), async (req, res) => {
+router.put('/:id', allowRoles('admin'), requireWriteAccess, async (req, res) => {
   try {
     const item = await MenuItem.findById(req.params.id);
 
@@ -188,7 +188,7 @@ router.put('/:id', allowRoles('admin'), async (req, res) => {
   }
 });
 
-router.delete('/:id', allowRoles('admin'), async (req, res) => {
+router.delete('/:id', allowRoles('admin'), requireWriteAccess, async (req, res) => {
   try {
     const item = await MenuItem.findByIdAndDelete(req.params.id);
 

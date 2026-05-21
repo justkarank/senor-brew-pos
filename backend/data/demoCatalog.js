@@ -3,21 +3,18 @@ const DEMO_USERS = [
     demoKey: 'demo-admin',
     name: 'Admin',
     email: 'admin@senorbrew.com',
-    password: 'admin123',
     role: 'admin'
   },
   {
     demoKey: 'demo-counter',
     name: 'Counter Staff',
     email: 'counter@senorbrew.com',
-    password: 'counter123',
     role: 'counter'
   },
   {
     demoKey: 'demo-kitchen',
     name: 'Kitchen Staff',
     email: 'kitchen@senorbrew.com',
-    password: 'kitchen123',
     role: 'kitchen'
   }
 ];

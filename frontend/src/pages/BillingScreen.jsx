@@ -5,6 +5,8 @@ import {
   Search, Coffee, Leaf, Cookie, CupSoda, Utensils
 } from 'lucide-react';
 import { calculateTotalsFromDiscountPercentage, formatCurrency } from '../utils/format';
+import ReadOnlyNotice from '../components/ReadOnlyNotice';
+import { canCurrentUserWrite } from '../utils/session';
 
 const CATEGORIES = ['Coffee', 'Tea', 'Snacks', 'Cold Drinks', 'Other'];
 
@@ -37,6 +39,7 @@ function BillingScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const canWrite = canCurrentUserWrite();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -108,6 +111,11 @@ function BillingScreen() {
 
   const generateBill = async () => {
     if (cart.length === 0) return;
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to generate bills.');
+      return;
+    }
+
     setGenerating(true);
     setError('');
     try {
@@ -163,6 +171,12 @@ function BillingScreen() {
             Billing
           </h2>
           <p className="text-sm mt-0.5" style={{ color: '#4A6B69' }}>Select items to build the order</p>
+
+          {!canWrite && (
+            <div className="mt-3">
+              <ReadOnlyNotice message="Demo billing is read-only. You can browse items and totals, but bills will not be created." />
+            </div>
+          )}
 
           {error && (
             <div
@@ -454,13 +468,13 @@ function BillingScreen() {
 
           <button
             onClick={generateBill}
-            disabled={cart.length === 0 || generating}
+            disabled={cart.length === 0 || generating || !canWrite}
             className="btn-press w-full h-12 rounded-xl font-bold text-sm text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#103935', boxShadow: cart.length > 0 ? '0 4px 12px rgba(16,57,53,0.30)' : 'none' }}
-            onMouseEnter={e => { if (cart.length > 0 && !generating) e.currentTarget.style.backgroundColor = '#0A2422'; }}
+            style={{ backgroundColor: '#103935', boxShadow: cart.length > 0 && canWrite ? '0 4px 12px rgba(16,57,53,0.30)' : 'none' }}
+            onMouseEnter={e => { if (cart.length > 0 && !generating && canWrite) e.currentTarget.style.backgroundColor = '#0A2422'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#103935'; }}
           >
-            {generating ? 'Generating Bill...' : 'Generate Bill'}
+            {!canWrite ? 'Read-only Demo' : generating ? 'Generating Bill...' : 'Generate Bill'}
           </button>
 
           {cart.length > 0 && (

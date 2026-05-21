@@ -12,6 +12,12 @@ const baseUrl = 'http://127.0.0.1:5000';
 const backendLogLines = [];
 const verifiedChecks = [];
 
+process.env.NODE_ENV = 'test';
+process.env.ENABLE_DEMO_BOOTSTRAP = 'true';
+process.env.DEMO_ACCESS_ENABLED = 'true';
+process.env.DEMO_WRITE_ACCESS = 'true';
+process.env.DEMO_PASSWORD_LOGIN_ENABLED = 'false';
+
 const addBackendLog = (chunk) => {
   const lines = chunk
     .toString()
@@ -130,10 +136,10 @@ const waitForHealthyBackend = async () => {
   throw lastNetworkError || new Error('Backend never became reachable.');
 };
 
-const loginAs = async (email, password) =>
-  request('/api/auth/login', {
+const loginDemoRole = async (role) =>
+  request('/api/auth/demo', {
     method: 'POST',
-    body: { email, password }
+    body: { role }
   });
 
 const runSmokeChecks = async () => {
@@ -151,14 +157,15 @@ const runSmokeChecks = async () => {
   });
   verifiedChecks.push('Invalid login is rejected with 401');
 
-  const adminLogin = await loginAs('admin@senorbrew.com', 'admin123');
-  const counterLogin = await loginAs('counter@senorbrew.com', 'counter123');
-  const kitchenLogin = await loginAs('kitchen@senorbrew.com', 'kitchen123');
+  const adminLogin = await loginDemoRole('admin');
+  const counterLogin = await loginDemoRole('counter');
+  const kitchenLogin = await loginDemoRole('kitchen');
 
   expect(adminLogin.data?.user?.role === 'admin', 'Admin login returned the wrong role');
   expect(counterLogin.data?.user?.role === 'counter', 'Counter login returned the wrong role');
   expect(kitchenLogin.data?.user?.role === 'kitchen', 'Kitchen login returned the wrong role');
-  verifiedChecks.push('All three demo users can log in successfully');
+  expect(adminLogin.data?.user?.isDemo === true, 'Demo endpoint did not return a demo session');
+  verifiedChecks.push('All three demo users can log in successfully through the demo endpoint when verification opts in');
 
   const adminToken = adminLogin.data.token;
   const counterToken = counterLogin.data.token;

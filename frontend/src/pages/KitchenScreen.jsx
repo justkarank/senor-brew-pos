@@ -3,6 +3,8 @@ import api, { getApiErrorMessage } from '../api';
 import { SOCKET_URL } from '../config';
 import { io } from 'socket.io-client';
 import { ChefHat, Timer, CheckCircle2, RefreshCw, Radio } from 'lucide-react';
+import ReadOnlyNotice from '../components/ReadOnlyNotice';
+import { canCurrentUserWrite } from '../utils/session';
 
 const CARD_SHADOW = '0 2px 8px rgba(16,57,53,0.08)';
 
@@ -40,6 +42,7 @@ function KitchenScreen() {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
   const [, setTick] = useState(0);
+  const canWrite = canCurrentUserWrite();
 
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 30000);
@@ -78,6 +81,11 @@ function KitchenScreen() {
   };
 
   const updateStatus = async (orderId, newStatus) => {
+    if (!canWrite) {
+      setError('Demo access is read-only. Sign in with a private staff account to update orders.');
+      return;
+    }
+
     try {
       await api.put(`/api/orders/${orderId}/status`, { status: newStatus });
       setOrders(prev =>
@@ -155,6 +163,12 @@ function KitchenScreen() {
           </button>
         </div>
       </div>
+
+      {!canWrite && (
+        <div className="mb-4">
+          <ReadOnlyNotice message="Demo kitchen is read-only. Live orders can be viewed, but statuses cannot be changed." />
+        </div>
+      )}
 
       {error && (
         <div
@@ -307,23 +321,25 @@ function KitchenScreen() {
                         {order.status === 'pending' && (
                           <button
                             onClick={() => updateStatus(order._id, 'preparing')}
-                            className="btn-press w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-white"
+                            disabled={!canWrite}
+                            className="btn-press w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ backgroundColor: '#3B82F6', boxShadow: '0 2px 8px rgba(59,130,246,0.30)' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563EB'}
+                            onMouseEnter={e => { if (canWrite) e.currentTarget.style.backgroundColor = '#2563EB'; }}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3B82F6'}
                           >
-                            Start Preparing
+                            {canWrite ? 'Start Preparing' : 'Read-only Demo'}
                           </button>
                         )}
                         {order.status === 'preparing' && (
                           <button
                             onClick={() => updateStatus(order._id, 'ready')}
-                            className="btn-press w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-white"
+                            disabled={!canWrite}
+                            className="btn-press w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ backgroundColor: '#103935', boxShadow: '0 2px 8px rgba(16,57,53,0.25)' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0A2422'}
+                            onMouseEnter={e => { if (canWrite) e.currentTarget.style.backgroundColor = '#0A2422'; }}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#103935'}
                           >
-                            Mark Ready
+                            {canWrite ? 'Mark Ready' : 'Read-only Demo'}
                           </button>
                         )}
                       </div>
