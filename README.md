@@ -1,4 +1,9 @@
-# Senor Brew Club
+# Senor Brew Club: Café POS and Management System
+
+**Live demo (read-only):** https://senorbrew-frontend.vercel.app/login
+The demo backend runs on a free hosting tier, so the first request after a quiet period can take up to a minute to wake up.
+
+![Sales dashboard, billing and kitchen display](docs/screenshots/overview.jpg)
 
 Senor Brew Club is a full-stack cafe POS and management system built for the Senor Brew Club Cafe Business. It includes role-based login, billing, kitchen order flow, menu management, inventory tracking, sales dashboard, and a public-safe read-only demo mode.
 
